@@ -1,5 +1,6 @@
 package com.abiooc.inventory_service.entity;
 
+import com.xdev.xdevbase.entities.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -12,11 +13,7 @@ import com.abiooc.inventory_service.Enum.TypeMouvement;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class MouvementStockSec {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class MouvementStockSec  extends BaseEntity {
 
     @ManyToOne
     @JoinColumn(name = "article_id", nullable = false)
@@ -26,16 +23,11 @@ public class MouvementStockSec {
     private Integer quantite;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "type_mouvement", nullable = false)
+    @Column(nullable = false)
     private TypeMouvement typeMouvement;
 
     private String motif;
 
-    @Column(name = "date_mouvement")
     private LocalDateTime dateMouvement;
 
-    @PrePersist
-    protected void onCreate() {
-        dateMouvement = LocalDateTime.now();
-    }
 }

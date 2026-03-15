@@ -1,4 +1,4 @@
-package com.abiooc.inventory_service.service;
+/*package com.abiooc.inventory_service.service;
 
 import com.abiooc.inventory_service.entity.*;
 import com.abiooc.inventory_service.repository.ArticleSecRepository;
@@ -84,4 +84,4 @@ public class SeuilAlerteService {
     }
 
 
-}
+}*/

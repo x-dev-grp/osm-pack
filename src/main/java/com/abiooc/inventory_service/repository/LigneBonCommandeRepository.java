@@ -1,9 +1,15 @@
 package com.abiooc.inventory_service.repository;
 
 import com.abiooc.inventory_service.entity.LigneBonCommande;
-import org.springframework.data.jpa.repository.JpaRepository;
+import com.xdev.xdevbase.repos.BaseRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Repository
-public interface LigneBonCommandeRepository extends JpaRepository<LigneBonCommande, Long> {
+public interface LigneBonCommandeRepository extends BaseRepository<LigneBonCommande> {
+
+    @Transactional
+    void deleteByBonCommandeId(UUID bonCommandeId);
 }

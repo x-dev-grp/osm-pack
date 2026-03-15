@@ -1,10 +1,11 @@
-package com.abiooc.inventory_service.controller;
+/*package com.abiooc.inventory_service.controller;
 
 import com.abiooc.inventory_service.dto.StatistiquesDTO;
 import com.abiooc.inventory_service.service.StatistiqueService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -16,16 +17,27 @@ public class StatistiqueController {
     private StatistiqueService statistiqueService;
 
     @GetMapping("/dashboard")
-    public StatistiquesDTO getDashboardStats() {
+    public StatistiquesDTO getDashboard() {
         return statistiqueService.getStatistiquesCompletes();
+    }
+
+    @GetMapping("/articles/critiques")
+    public List<Map<String, Object>> getArticlesCritiques() {
+        return statistiqueService.getArticlesCritiques();
+    }
+
+    @GetMapping("/mouvements/recents")
+    public List<Map<String, Object>> getMouvementsRecents(@RequestParam(defaultValue = "10") int limit) {
+        return statistiqueService.getMouvementsRecents(limit);
     }
 
     @GetMapping("/stock/taux-rupture")
     public Map<String, Object> getTauxRupture() {
         StatistiquesDTO stats = statistiqueService.getStatistiquesCompletes();
         return Map.of(
-                "taux", stats.getTauxRupture(),
-                "articlesEnAlerte", stats.getArticlesEnAlerte()
+                "tauxRupture", stats.getTauxRupture(),
+                "articlesEnRupture", (long) Math.round((stats.getTauxRupture() / 100.0) * stats.getTotalArticles()),
+                "totalArticles", stats.getTotalArticles()
         );
     }
 
@@ -46,4 +58,4 @@ public class StatistiqueController {
                 "totalArticles", stats.getTotalArticles()
         );
     }
-}
+}*/

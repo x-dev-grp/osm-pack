@@ -1,32 +1,33 @@
 package com.abiooc.inventory_service.entity;
 
+import com.abiooc.inventory_service.Enum.StatutBonCommande;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.xdev.xdevbase.entities.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import com.abiooc.inventory_service.Enum.StatutBonCommande;
 
 @Entity
 @Table(name = "bons_commandes")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class BonCommande {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class BonCommande extends BaseEntity {
 
     @Column(name = "numero_bc", unique = true, nullable = false)
     private String numeroBC;
 
+    @Column(name = "fournisseur", nullable = false)
     private String fournisseur;
 
-    @Column(name = "date_creation")
-    private LocalDateTime dateCreation;
+    @Column(name = "motif_refus")
+    private String motifRefus;
+
 
     @Column(name = "date_validation")
     private LocalDateTime dateValidation;
@@ -35,17 +36,11 @@ public class BonCommande {
     private LocalDateTime dateReceptionPrevue;
 
     @Enumerated(EnumType.STRING)
-    private StatutBonCommande statut = StatutBonCommande.EN_ATTENTE;
+    private StatutBonCommande status = StatutBonCommande.EN_ATTENTE;
 
     @OneToMany(mappedBy = "bonCommande", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<LigneBonCommande> lignes = new ArrayList<>();
 
 
-    @Column(name = "motif_refus")
-    private String motifRefus;
-
-    @PrePersist
-    protected void onCreate() {
-        dateCreation = LocalDateTime.now();
-    }
 }
