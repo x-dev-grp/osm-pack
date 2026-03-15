@@ -1,11 +1,13 @@
 package com.abiooc.inventory_service.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
 import java.util.List;
 import java.util.Map;
 
+
+@Getter
+@Setter
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

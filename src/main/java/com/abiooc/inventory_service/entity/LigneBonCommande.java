@@ -1,10 +1,12 @@
 package com.abiooc.inventory_service.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.xdev.xdevbase.entities.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import java.math.BigDecimal;
 
 @Entity
@@ -12,11 +14,7 @@ import java.math.BigDecimal;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class LigneBonCommande {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class LigneBonCommande extends BaseEntity {
 
     @ManyToOne
     @JsonIgnore//solution pour boucle infinie
@@ -27,13 +25,11 @@ public class LigneBonCommande {
     @JoinColumn(name = "article_id", nullable = false)
     private ArticleSec article;
 
-    @Column(name = "quantite_commandee", nullable = false)
+    @Column(nullable = false)
     private Integer quantiteCommandee;
 
-    @Column(name = "quantite_recue")
     private Integer quantiteRecue = 0;
 
-    @Column(name = "prix_unitaire")
     private BigDecimal prixUnitaire;
 
     private String remarque;

@@ -1,4 +1,4 @@
-package com.abiooc.inventory_service.service;
+/*package com.abiooc.inventory_service.service;
 
 import com.abiooc.inventory_service.entity.BonCommande;
 import com.abiooc.inventory_service.entity.LigneBonCommande;
@@ -134,4 +134,4 @@ public class PdfGeneratorService {
         cell.setTextAlignment(TextAlignment.CENTER);
         return cell;
     }
-}
+}*/

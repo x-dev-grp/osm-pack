@@ -1,10 +1,12 @@
 package com.abiooc.inventory_service.entity;
 
+import com.abiooc.inventory_service.Enum.UniteMesure;
+import com.xdev.xdevbase.entities.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
+
 import com.abiooc.inventory_service.Enum.CategorieArticle;
 
 @Entity
@@ -12,14 +14,7 @@ import com.abiooc.inventory_service.Enum.CategorieArticle;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ArticleSec {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(unique = true, nullable = false)
-    private String sku;
+public class ArticleSec extends BaseEntity {
 
     @Column(nullable = false)
     private String nom;
@@ -28,24 +23,19 @@ public class ArticleSec {
     @Column(nullable = false)
     private CategorieArticle categorie;
 
-    private String fournisseurDefaut;
+    @ManyToOne
+    @JoinColumn(name = "fournisseur_id")
+    private Fournisseur fournisseur;
 
-    @Column(name = "stock_minimum")
     private Integer stockMinimum = 0;
 
-    @Column(name = "stock_maximum")
     private Integer stockMaximum = 0;
-
-    @Column(name = "unite_mesure")
-    private String uniteMesure = "pièce";
 
     private Boolean actif = true;
 
-    @Column(name = "date_creation")
-    private LocalDateTime dateCreation;
+    @ManyToOne
+    private SKU reference;
 
-    @PrePersist
-    protected void onCreate() {
-        dateCreation = LocalDateTime.now();
-    }
+    @Enumerated(EnumType.STRING)
+    private UniteMesure um;
 }
