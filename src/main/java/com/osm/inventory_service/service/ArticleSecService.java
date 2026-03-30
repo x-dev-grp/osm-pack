@@ -56,9 +56,9 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
     public ArticleSecDto createArticle(ArticleSecDto articleDto) {
         ArticleSec article = convertToEntity(articleDto);
 
-        if (article.getActif() == null) {
-            article.setActif(true);
-        }
+
+        article.setActif(true);
+
         if (article.getStockMinimum() == null) {
             article.setStockMinimum(0);
         }

@@ -38,6 +38,10 @@ public class FournisseurController extends BaseControllerImpl<Fournisseur, Fourn
     public ResponseEntity<FournisseurDto> getFournisseurById(@PathVariable UUID id) {
         return ResponseEntity.ok(fournisseurService.getFournisseurById(id));
     }
+    @GetMapping("/actifs")
+    public ResponseEntity<List<FournisseurDto>> getActiveFournisseurs() {
+        return ResponseEntity.ok(fournisseurService.getActiveFournisseurs());
+    }
 
     @PostMapping("/create")
     public ResponseEntity<FournisseurDto> createFournisseur(@RequestBody FournisseurDto fournisseurDto) {
