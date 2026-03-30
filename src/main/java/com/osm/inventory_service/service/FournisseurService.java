@@ -70,10 +70,6 @@ public class FournisseurService extends BaseServiceImpl<Fournisseur, Fournisseur
             fournisseur.setActif(true);
         }
 
-        if (fournisseur.getCurrency() == null) {
-            fournisseur.setCurrency(Currency.TND);
-        }
-
         Fournisseur savedFournisseur = fournisseurRepository.save(fournisseur);
         return modelMapper.map(savedFournisseur, FournisseurDto.class);
     }
@@ -161,5 +157,10 @@ public class FournisseurService extends BaseServiceImpl<Fournisseur, Fournisseur
         String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
         String random = String.format("%04d", (int) (Math.random() * 10000));
         return prefix + date + random;
+    }
+    public List<FournisseurDto> getActiveFournisseurs() {
+        return fournisseurRepository.findByActifTrue().stream()
+                .map(f -> modelMapper.map(f, FournisseurDto.class))
+                .collect(Collectors.toList());
     }
 }

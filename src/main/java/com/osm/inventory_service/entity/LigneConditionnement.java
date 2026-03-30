@@ -43,4 +43,5 @@ public class LigneConditionnement extends BaseEntity {
     private Date dateProchaineMaintenance;
 
     private String notes;
+    private boolean actif;
 }

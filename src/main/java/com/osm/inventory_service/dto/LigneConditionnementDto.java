@@ -27,4 +27,5 @@ public class LigneConditionnementDto extends BaseDto<LigneConditionnement> imple
     private Date dateDerniereMaintenance;
     private Date dateProchaineMaintenance;
     private String notes;
+    private  boolean actif;
 }

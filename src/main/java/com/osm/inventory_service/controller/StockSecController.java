@@ -23,118 +23,226 @@ public class StockSecController extends BaseControllerImpl<StockSec, StockSecDto
     private final StockSecService stockService;
 
     @Autowired
-    public StockSecController(BaseService<StockSec, StockSecDto, StockSecDto> baseService, ModelMapper modelMapper, StockSecService stockService) {
+    public StockSecController(BaseService<StockSec, StockSecDto, StockSecDto> baseService,
+                              ModelMapper modelMapper,
+                              StockSecService stockService) {
         super(baseService, modelMapper);
         this.stockService = stockService;
     }
 
-
     @GetMapping
-    public ResponseEntity<List<StockSecDto>> getAllStocks() {
-        return ResponseEntity.ok(stockService.getAllStocks());
+    public ResponseEntity<?> getAllStocks() {
+        try {
+            List<StockSecDto> stocks = stockService.getAllStocks();
+            return ResponseEntity.ok(stocks);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<StockSecDto> getStockById(@PathVariable UUID id) {
-        return ResponseEntity.ok(stockService.getStockById(id));
+    public ResponseEntity<?> getStockById(@PathVariable UUID id) {
+        try {
+            StockSecDto stock = stockService.getStockById(id);
+            return ResponseEntity.ok(stock);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @GetMapping("/article/{articleId}")
-    public ResponseEntity<StockSecDto> getStockByArticle(@PathVariable UUID articleId) {
-        return ResponseEntity.ok(stockService.getStockByArticle(articleId));
+    public ResponseEntity<?> getStockByArticle(@PathVariable UUID articleId) {
+        try {
+            StockSecDto stock = stockService.getStockByArticle(articleId);
+            return ResponseEntity.ok(stock);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @GetMapping("/emplacement/{emplacementId}")
-    public ResponseEntity<List<StockSecDto>> getStocksByEmplacement(@PathVariable UUID emplacementId) {
-        return ResponseEntity.ok(stockService.getStocksByEmplacement(emplacementId));
+    public ResponseEntity<?> getStocksByEmplacement(@PathVariable UUID emplacementId) {
+        try {
+            List<StockSecDto> stocks = stockService.getStocksByEmplacement(emplacementId);
+            return ResponseEntity.ok(stocks);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @GetMapping("/zone/{zone}")
-    public ResponseEntity<List<StockSecDto>> getStocksByZone(@PathVariable String zone) {
-        return ResponseEntity.ok(stockService.getStocksByZone(zone));
+    public ResponseEntity<?> getStocksByZone(@PathVariable String zone) {
+        try {
+            List<StockSecDto> stocks = stockService.getStocksByZone(zone);
+            return ResponseEntity.ok(stocks);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @GetMapping("/emplacements-disponibles")
-    public ResponseEntity<List<StockSecDto>> getStocksAvecEmplacementDisponible() {
-        return ResponseEntity.ok(stockService.getStocksAvecEmplacementDisponible());
+    public ResponseEntity<?> getStocksAvecEmplacementDisponible() {
+        try {
+            List<StockSecDto> stocks = stockService.getStocksAvecEmplacementDisponible();
+            return ResponseEntity.ok(stocks);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PostMapping("/create")
-    public ResponseEntity<StockSecDto> createStock(@RequestBody StockSecDto stockDto) {
-        return new ResponseEntity<>(stockService.createStock(stockDto), HttpStatus.CREATED);
+    public ResponseEntity<?> createStock(@RequestBody StockSecDto stockDto) {
+        try {
+            StockSecDto created = stockService.createStock(stockDto);
+            return new ResponseEntity<>(created, HttpStatus.CREATED);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PostMapping("/article/{articleId}")
-    public ResponseEntity<StockSecDto> createStockForArticle(@PathVariable UUID articleId) {
-        return new ResponseEntity<>(stockService.createStockForArticle(articleId), HttpStatus.CREATED);
+    public ResponseEntity<?> createStockForArticle(@PathVariable UUID articleId) {
+        try {
+            StockSecDto created = stockService.createStockForArticle(articleId);
+            return new ResponseEntity<>(created, HttpStatus.CREATED);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
-
 
     @PutMapping("/{id}")
-    public ResponseEntity<StockSecDto> updateStock(@PathVariable UUID id, @RequestBody StockSecDto stockDto) {
-        return ResponseEntity.ok(stockService.updateStock(id, stockDto));
+    public ResponseEntity<?> updateStock(@PathVariable UUID id, @RequestBody StockSecDto stockDto) {
+        try {
+            StockSecDto updated = stockService.updateStock(id, stockDto);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
-
     @PutMapping("/{articleId}/entree")
-    public ResponseEntity<StockSecDto> entreeStock(@PathVariable UUID articleId, @RequestBody Map<String, Object> payload) {
-        Integer quantite = (Integer) payload.get("quantite");
-        String motif = (String) payload.get("motif");
-        return ResponseEntity.ok(stockService.entreeStock(articleId, quantite, motif));
+    public ResponseEntity<?> entreeStock(@PathVariable UUID articleId, @RequestBody Map<String, Object> payload) {
+        try {
+            Integer quantite = (Integer) payload.get("quantite");
+            String motif = (String) payload.get("motif");
+            StockSecDto result = stockService.entreeStock(articleId, quantite, motif);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/{articleId}/sortie")
-    public ResponseEntity<StockSecDto> sortieStock(@PathVariable UUID articleId, @RequestBody Map<String, Object> payload) {
-        Integer quantite = (Integer)payload.get("quantite");
-        String motif = String.valueOf(payload.get("motif"));
-        return ResponseEntity.ok(stockService.sortieStock(articleId, quantite,motif));
+    public ResponseEntity<?> sortieStock(@PathVariable UUID articleId, @RequestBody Map<String, Object> payload) {
+        try {
+            Integer quantite = (Integer) payload.get("quantite");
+            String motif = (String) payload.get("motif");
+            StockSecDto result = stockService.sortieStock(articleId, quantite, motif);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/{articleId}/ajuster")
-    public ResponseEntity<StockSecDto> ajusterStock(
-            @PathVariable UUID articleId,
-            @RequestBody Map<String, Object> payload) {
-        Integer nouvelleQuantite = (Integer) payload.get("quantite");
-        String motif = (String) payload.get("motif");
-        return ResponseEntity.ok(stockService.ajusterStock(articleId, nouvelleQuantite, motif));
+    public ResponseEntity<?> ajusterStock(@PathVariable UUID articleId, @RequestBody Map<String, Object> payload) {
+        try {
+            Integer nouvelleQuantite = (Integer) payload.get("quantite");
+            String motif = (String) payload.get("motif");
+            StockSecDto result = stockService.ajusterStock(articleId, nouvelleQuantite, motif);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
-
     @PutMapping("/{stockId}/assigner-emplacement/{emplacementId}")
-    public ResponseEntity<StockSecDto> assignerEmplacement(@PathVariable UUID stockId, @PathVariable UUID emplacementId) {
-        return ResponseEntity.ok(stockService.assignerEmplacement(stockId, emplacementId));
+    public ResponseEntity<?> assignerEmplacement(@PathVariable UUID stockId, @PathVariable UUID emplacementId) {
+        try {
+            StockSecDto result = stockService.assignerEmplacement(stockId, emplacementId);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/{stockId}/retirer-emplacement")
-    public ResponseEntity<StockSecDto> retirerEmplacement(@PathVariable UUID stockId) {
-        return ResponseEntity.ok(stockService.retirerEmplacement(stockId));
+    public ResponseEntity<?> retirerEmplacement(@PathVariable UUID stockId) {
+        try {
+            StockSecDto result = stockService.retirerEmplacement(stockId);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/{stockId}/transferer-emplacement/{nouvelEmplacementId}")
-    public ResponseEntity<StockSecDto> transfererEmplacement(
-            @PathVariable UUID stockId,
-            @PathVariable UUID nouvelEmplacementId) {
-        return ResponseEntity.ok(stockService.transfererEmplacement(stockId, nouvelEmplacementId));
+    public ResponseEntity<?> transfererEmplacement(@PathVariable UUID stockId, @PathVariable UUID nouvelEmplacementId) {
+        try {
+            StockSecDto result = stockService.transfererEmplacement(stockId, nouvelEmplacementId);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteStock(@PathVariable UUID id) {
-        stockService.deleteStock(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> deleteStock(@PathVariable UUID id) {
+        try {
+            stockService.deleteStock(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
+
     @GetMapping("/mouvements")
-    public ResponseEntity<List<MouvementStockSecDto>> getAllMouvements() {
-        return ResponseEntity.ok(stockService.getAllMouvementsDto());
+    public ResponseEntity<?> getAllMouvements() {
+        try {
+            List<MouvementStockSecDto> mouvements = stockService.getAllMouvementsDto();
+            return ResponseEntity.ok(mouvements);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @GetMapping("/mouvements/article/{articleId}")
-    public ResponseEntity<List<MouvementStockSecDto>> getMouvementsByArticle(@PathVariable UUID articleId) {
-        return ResponseEntity.ok(stockService.getMouvementsByArticleDto(articleId));
+    public ResponseEntity<?> getMouvementsByArticle(@PathVariable UUID articleId) {
+        try {
+            List<MouvementStockSecDto> mouvements = stockService.getMouvementsByArticleDto(articleId);
+            return ResponseEntity.ok(mouvements);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @DeleteMapping("/article/{articleId}")
-    public ResponseEntity<Void> deleteStockByArticle(@PathVariable UUID articleId) {
-        stockService.deleteStockByArticle(articleId);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> deleteStockByArticle(@PathVariable UUID articleId) {
+        try {
+            stockService.deleteStockByArticle(articleId);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @Override

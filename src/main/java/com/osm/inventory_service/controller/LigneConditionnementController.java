@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -22,52 +23,102 @@ public class LigneConditionnementController extends BaseControllerImpl<LigneCond
     private final LigneConditionnementService ligneService;
 
     @Autowired
-    public LigneConditionnementController(BaseService<LigneConditionnement, LigneConditionnementDto, LigneConditionnementDto> baseService, ModelMapper modelMapper, LigneConditionnementService ligneService) {
+    public LigneConditionnementController(BaseService<LigneConditionnement, LigneConditionnementDto, LigneConditionnementDto> baseService,
+                                          ModelMapper modelMapper,
+                                          LigneConditionnementService ligneService) {
         super(baseService, modelMapper);
         this.ligneService = ligneService;
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<LigneConditionnementDto> getLigneById(@PathVariable UUID id) {
-        return ResponseEntity.ok(ligneService.getLigneById(id));
+    public ResponseEntity<?> getLigneById(@PathVariable UUID id) {
+        try {
+            LigneConditionnementDto ligne = ligneService.getLigneById(id);
+            return ResponseEntity.ok(ligne);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
+
     @GetMapping
-    public ResponseEntity<List<LigneConditionnementDto>> getAllLignes() {
-        return ResponseEntity.ok(ligneService.getAllLignes());
+    public ResponseEntity<?> getAllLignes() {
+        try {
+            List<LigneConditionnementDto> lignes = ligneService.getAllLignes();
+            return ResponseEntity.ok(lignes);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
+
     @PostMapping("/create")
-    public ResponseEntity<LigneConditionnementDto> createLigne(@RequestBody LigneConditionnementDto ligneDto) {
-        return new ResponseEntity<>(ligneService.createLigne(ligneDto), HttpStatus.CREATED);
+    public ResponseEntity<?> createLigne(@RequestBody LigneConditionnementDto ligneDto) {
+        try {
+            LigneConditionnementDto created = ligneService.createLigne(ligneDto);
+            return new ResponseEntity<>(created, HttpStatus.CREATED);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<LigneConditionnementDto> updateLigne(@PathVariable UUID id, @RequestBody LigneConditionnementDto ligneDto) {
-        return ResponseEntity.ok(ligneService.updateLigne(id, ligneDto));
+    public ResponseEntity<?> updateLigne(@PathVariable UUID id, @RequestBody LigneConditionnementDto ligneDto) {
+        try {
+            LigneConditionnementDto updated = ligneService.updateLigne(id, ligneDto);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}/desactiver")
-    public ResponseEntity<Void> desactiverLigne(@PathVariable UUID id) {
-        ligneService.desactiverLigne(id);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> desactiverLigne(@PathVariable UUID id) {
+        try {
+            ligneService.desactiverLigne(id);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}/activer")
-    public ResponseEntity<Void> activerLigne(@PathVariable UUID id) {
-        ligneService.activerLigne(id);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> activerLigne(@PathVariable UUID id) {
+        try {
+            ligneService.activerLigne(id);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}/changer-etat")
-    public ResponseEntity<LigneConditionnementDto> changerEtat(
-            @PathVariable UUID id,
-            @RequestBody Map<String, Statue> payload) {
-        Statue nouvelEtat = payload.get("etat");
-        return ResponseEntity.ok(ligneService.changerEtat(id, nouvelEtat));
+    public ResponseEntity<?> changerEtat(@PathVariable UUID id, @RequestBody Map<String, Statue> payload) {
+        try {
+            Statue nouvelEtat = payload.get("etat");
+            LigneConditionnementDto updated = ligneService.changerEtat(id, nouvelEtat);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
+
     @GetMapping("/actifs")
-    public ResponseEntity<List<LigneConditionnementDto>> getLignesActives() {
-        return ResponseEntity.ok(ligneService.getLignesActives());
+    public ResponseEntity<?> getLignesActives() {
+        try {
+            List<LigneConditionnementDto> actives = ligneService.getLignesActives();
+            return ResponseEntity.ok(actives);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
+
     @Override
     protected String getResourceName() {
         return "LigneConditionnement";
