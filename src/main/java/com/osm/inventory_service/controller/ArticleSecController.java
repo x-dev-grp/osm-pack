@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -21,46 +22,89 @@ public class ArticleSecController extends BaseControllerImpl<ArticleSec, Article
     private final ArticleSecService articleService;
 
     @Autowired
-    public ArticleSecController(BaseService<ArticleSec, ArticleSecDto, ArticleSecDto> baseService, ModelMapper modelMapper, ArticleSecService articleService) {
+    public ArticleSecController(BaseService<ArticleSec, ArticleSecDto, ArticleSecDto> baseService,
+                                ModelMapper modelMapper,
+                                ArticleSecService articleService) {
         super(baseService, modelMapper);
         this.articleService = articleService;
     }
 
     @GetMapping
     public ResponseEntity<List<ArticleSecDto>> getAllArticles() {
-        List<ArticleSecDto> articles = articleService.getAllArticles();
-        System.out.println("Returning " + articles.size() + " articles");
-        return ResponseEntity.ok(articles);
-    }
-    @GetMapping("/actifs")
-    public ResponseEntity<List<ArticleSecDto>> getActiveArticles() {
-        return ResponseEntity.ok(articleService.getAllActiveArticles());
+        try {
+            List<ArticleSecDto> articles = articleService.getAllArticles();
+            System.out.println("Returning " + articles.size() + " articles");
+            return ResponseEntity.ok(articles);
+        } catch (Exception e) {
+            // In case of unexpected error, return 500 or handle appropriately
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
+    @GetMapping("/actifs")
+    public ResponseEntity<?> getActiveArticles() {
+        try {
+            List<ArticleSecDto> activeArticles = articleService.getAllActiveArticles();
+            return ResponseEntity.ok(activeArticles);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ArticleSecDto> getArticleById(@PathVariable UUID id) {
-        return ResponseEntity.ok(articleService.getArticleById(id));
+    public ResponseEntity<?> getArticleById(@PathVariable UUID id) {
+        try {
+            ArticleSecDto article = articleService.getArticleById(id);
+            return ResponseEntity.ok(article);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PostMapping("/create")
-    public ResponseEntity<ArticleSecDto> createArticle(@RequestBody ArticleSecDto articleDto) {
-        return new ResponseEntity<>(articleService.createArticle(articleDto), HttpStatus.CREATED);
+    public ResponseEntity<?> createArticle(@RequestBody ArticleSecDto articleDto) {
+        try {
+            ArticleSecDto created = articleService.createArticle(articleDto);
+            return new ResponseEntity<>(created, HttpStatus.CREATED);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ArticleSecDto> updateArticle(@PathVariable UUID id, @RequestBody ArticleSecDto articleDto) {
-        return ResponseEntity.ok(articleService.updateArticle(id, articleDto));
+    public ResponseEntity<?> updateArticle(@PathVariable UUID id, @RequestBody ArticleSecDto articleDto) {
+        try {
+            ArticleSecDto updated = articleService.updateArticle(id, articleDto);
+            return ResponseEntity.ok(updated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}/activer")
-    public ResponseEntity<ArticleSecDto> activerArticle(@PathVariable UUID id) {
-        return ResponseEntity.ok(articleService.activerArticle(id));
+    public ResponseEntity<?> activerArticle(@PathVariable UUID id) {
+        try {
+            ArticleSecDto activated = articleService.activerArticle(id);
+            return ResponseEntity.ok(activated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}/desactiver")
-    public ResponseEntity<ArticleSecDto> desactiverArticle(@PathVariable UUID id) {
-        return ResponseEntity.ok(articleService.desactiverArticle(id));
+    public ResponseEntity<?> desactiverArticle(@PathVariable UUID id) {
+        try {
+            ArticleSecDto deactivated = articleService.desactiverArticle(id);
+            return ResponseEntity.ok(deactivated);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @Override

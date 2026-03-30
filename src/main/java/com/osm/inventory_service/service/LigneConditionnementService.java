@@ -45,7 +45,7 @@ public class LigneConditionnementService extends BaseServiceImpl<LigneConditionn
 
         LigneConditionnement ligne = modelMapper.map(ligneDto, LigneConditionnement.class);
         ligne.setCode(genererCodeLigne());
-        ligne.setDeleted(false);
+        ligne.setActif(true);
         ligne.setEtat(
                 ligneDto.getEtat() != null ? ligneDto.getEtat() : Statue.ACTIF
         );
@@ -82,7 +82,7 @@ public class LigneConditionnementService extends BaseServiceImpl<LigneConditionn
     public void desactiverLigne(UUID id) {
         LigneConditionnement ligne = ligneRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ligne non trouvée avec id: " + id));
-        ligne.setDeleted(true);
+        ligne.setActif(false);
         ligneRepository.save(ligne);
     }
 
@@ -90,7 +90,7 @@ public class LigneConditionnementService extends BaseServiceImpl<LigneConditionn
     public void activerLigne(UUID id) {
         LigneConditionnement ligne = ligneRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ligne non trouvée avec id: " + id));
-        ligne.setDeleted(false);
+        ligne.setActif(true);
         ligneRepository.save(ligne);
     }
 
