@@ -110,4 +110,9 @@ public class SKUController extends BaseControllerImpl<SKU, SKUDto, SKUDto> {
     protected String getResourceName() {
         return "SKU";
     }
+
+    @Override
+    public ResponseEntity<?> resolve(String publicCode) {
+        return null;
+    }
 }

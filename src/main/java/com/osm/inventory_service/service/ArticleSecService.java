@@ -8,8 +8,11 @@ import com.osm.inventory_service.repository.ArticleSecRepository;
 import com.osm.inventory_service.repository.FournisseurRepository;
 import com.osm.inventory_service.repository.SKURepository;
 import com.xdev.xdevbase.models.Action;
+import com.xdev.xdevbase.qr.model.QrCodeInfo;
+import com.xdev.xdevbase.qr.model.QrResolveResponse;
 import com.xdev.xdevbase.repos.BaseRepository;
 import com.xdev.xdevbase.services.impl.BaseServiceImpl;
+import jakarta.persistence.EntityNotFoundException;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -55,10 +58,7 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
     @Transactional
     public ArticleSecDto createArticle(ArticleSecDto articleDto) {
         ArticleSec article = convertToEntity(articleDto);
-
-
         article.setActif(true);
-
         if (article.getStockMinimum() == null) {
             article.setStockMinimum(0);
         }
@@ -67,6 +67,11 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         }
 
         ArticleSec savedArticle = articleRepository.save(article);
+        QrCodeInfo qrInfo = generateQrInfo(savedArticle.getId());
+        ArticleSecDto result = convertToDto(savedArticle);
+        result.setPublicCode(qrInfo.getPublicCode());
+        result.setQrUrl(qrInfo.getQrUrl());
+        result.setQrImageBase64(qrInfo.getQrImageBase64());
         try {
             stockSecService.createStockForArticle(savedArticle.getId());
         } catch (Exception e) {
@@ -106,6 +111,7 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         ArticleSec updatedArticle = articleRepository.save(existingArticle);
         return convertToDto(updatedArticle);
     }
+    @Transactional(readOnly = true)
     public List<ArticleSecDto> getAllActiveArticles() {
         return articleRepository.findByActifTrue().stream()
                 .map(this::convertToDto)
@@ -153,6 +159,43 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
             dto.setFournisseur(modelMapper.map(article.getFournisseur(), FournisseurDto.class));
         }
         return dto;
+    }
+    /// ///////////////////////////qqrCode
+    @Override
+    protected String getEntityType() {
+        return "ARTICLE";
+    }
+
+    @Override
+    protected String getLabel(ArticleSec entity) {
+        return entity.getNom();   // le libellé affiché sur le mobile
+    }
+
+    @Override
+    protected String getStatus(ArticleSec entity) {
+        return entity.getActif() ? "ACTIF" : "INACTIF";
+    }
+
+    @Override
+    protected String getMobileRoute() {
+        return "/article/detail";
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public QrResolveResponse resolve(String publicCode) {
+        ArticleSec entity = articleRepository.findByQrHex(publicCode)
+                .orElseThrow(() -> new EntityNotFoundException("Article non trouvé pour le code : " + publicCode));
+
+        QrResolveResponse response = new QrResolveResponse();
+        response.setEntityType(getEntityType());
+        response.setPublicCode(publicCode);
+        response.setEntityId(entity.getId().toString());
+        response.setLabel(getLabel(entity));
+        response.setStatus(getStatus(entity));
+        response.setMobileRoute(getMobileRoute());
+        response.setData(convertToDto(entity));
+        return response;
     }
 
 
