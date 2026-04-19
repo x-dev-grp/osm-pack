@@ -9,7 +9,6 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -152,16 +151,5 @@ public class EmplacementStockService extends BaseServiceImpl<EmplacementStock, E
         return code;
     }
 
-   /* public List<AuditDto> getAuditEmplacements() {
-        return emplacementRepository.findAll().stream()
-                .map(emp -> new AuditDto(
-                        "EmplacementStock",
-                        emp.getId().toString(),
-                        emp.getCreatedBy(),
-                        emp.getCreatedDate(),
-                        emp.getLastModifiedBy(),
-                        emp.getLastModifiedDate()
-                ))
-                .collect(Collectors.toList());*/
 
 }

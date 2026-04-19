@@ -335,7 +335,10 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
         }
     }*/
 
- 
+    @Override
+    public ResponseEntity<?> resolve(String publicCode) {
+        return null;
+    }
 
     @Override
     protected String getResourceName() {

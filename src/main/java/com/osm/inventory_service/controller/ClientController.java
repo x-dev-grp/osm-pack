@@ -222,4 +222,9 @@ public class ClientController extends BaseControllerImpl<Client, ClientDto, Clie
     protected String getResourceName() {
         return "Client".toUpperCase();
     }
+
+    @Override
+    public ResponseEntity<?> resolve(String publicCode) {
+        return null;
+    }
 }

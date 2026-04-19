@@ -1,5 +1,6 @@
 package com.osm.inventory_service.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.xdev.xdevbase.entities.BaseEntity;
 import jakarta.persistence.*;
@@ -18,8 +19,9 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class LigneBonCommande extends BaseEntity {
 
-    @ManyToOne
-    @JsonIgnore//solution pour boucle infinie
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JsonIgnore
+    @JsonBackReference
     @JoinColumn(name = "bon_commande_id", nullable = false)
     private BonCommande bonCommande;
 

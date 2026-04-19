@@ -26,11 +26,9 @@ public class BonCommandeDto  extends BaseDto<BonCommande> implements Serializabl
     LocalDateTime lastModifiedDate;
     UUID externalId;
     String numeroBC;
-    String fournisseur;
-    LocalDateTime dateCreation;
     LocalDateTime dateValidation;
     LocalDateTime dateReceptionPrevue;
-    StatutBonCommande statut;
+    StatutBonCommande status;
     List<LigneBonCommandeDto> lignes;
     String motifRefus;
 

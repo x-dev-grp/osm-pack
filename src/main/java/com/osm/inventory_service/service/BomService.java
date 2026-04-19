@@ -42,12 +42,12 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
         return BOM.class;
     }
 
-
+    @Transactional(readOnly = true)
     public BOMDto getBomById(UUID id) {
         BOM bom = bomRepository.findById(id).orElseThrow(() -> new RuntimeException("BOM non trouvée avec l'id : " + id));
         return convertToDto(bom);
     }
-
+    @Transactional(readOnly = true)
     public List<BOMDto> getBomsBySku(UUID skuId) {
         return bomRepository.findBySkuId(skuId).stream().map(this::convertToDto).collect(Collectors.toList());
     }
@@ -98,7 +98,7 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
         BOM updated = bomRepository.save(bom);
         return convertToDto(updated);
     }
-
+    @Transactional(readOnly = true)
     public List<BOMDto> getAllBoms() {
         return bomRepository.findAll().stream().map(this::convertToDto).collect(Collectors.toList());
     }
