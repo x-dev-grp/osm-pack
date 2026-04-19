@@ -72,4 +72,8 @@ public class FournisseurController extends BaseControllerImpl<Fournisseur, Fourn
     protected String getResourceName() {
         return "Fournisseur";
     }
+    @Override
+    public ResponseEntity<?> resolve(String publicCode) {
+        return null;
+    }
 }

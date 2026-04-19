@@ -2,7 +2,7 @@ package com.osm.inventory_service.controller;
 
 
 
-import com.osm.inventory_service.dto.AuditDto;
+import com.xdev.xdevbase.dtos.AuditDto;
 import com.osm.inventory_service.service.AuditService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

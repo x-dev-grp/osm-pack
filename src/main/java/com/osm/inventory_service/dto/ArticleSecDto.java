@@ -32,5 +32,8 @@ public class ArticleSecDto extends BaseDto<ArticleSec> implements Serializable {
   private  Integer stockMaximum;
   private  Boolean actif;
   private   FournisseurDto fournisseur;
+  private String publicCode;
+  private String qrUrl;
+  private String qrImageBase64;
 
 }

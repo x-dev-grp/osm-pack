@@ -4,10 +4,13 @@ import com.osm.inventory_service.dto.ArticleSecDto;
 import com.osm.inventory_service.entity.ArticleSec;
 import com.osm.inventory_service.service.ArticleSecService;
 import com.xdev.xdevbase.controllers.impl.BaseControllerImpl;
+import com.xdev.xdevbase.qr.model.QrResolveResponse;
 import com.xdev.xdevbase.services.BaseService;
+import jakarta.persistence.EntityNotFoundException;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -110,5 +113,31 @@ public class ArticleSecController extends BaseControllerImpl<ArticleSec, Article
     @Override
     protected String getResourceName() {
         return "ArticleSec";
+    }
+
+    @Override
+    public ResponseEntity<?> resolve(String publicCode) {
+        try {
+            QrResolveResponse response = getBaseService().resolve(publicCode);
+            return ResponseEntity.ok(response);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{id}/qr-image")
+    public ResponseEntity<byte[]> getQrImage(@PathVariable UUID id) {
+        ArticleSec entity = articleService.getArticleEntityById(id);
+        byte[] image;
+        if (entity.getQrHex() == null || entity.getQrHex().isBlank()) {
+            // Génération à la volée (si jamais l'entité n'a pas encore de QR)
+            image = articleService.generateQrImageFromEntity(entity); // à implémenter
+        } else {
+            image = articleService.generateQrImage(entity.getQrHex());
+        }
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .body(image);
     }
 }

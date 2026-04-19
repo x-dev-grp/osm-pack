@@ -1,6 +1,6 @@
 package com.osm.inventory_service.service;
 
-import com.osm.inventory_service.dto.AuditDto;
+import com.xdev.xdevbase.dtos.AuditDto;
 import com.osm.inventory_service.entity.ArticleSec;
 import com.osm.inventory_service.entity.*;
 import jakarta.persistence.EntityManager;
