@@ -217,6 +217,43 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
     protected String getLabel(ArticleSec entity) {
         return entity.getNom();   // le libellé affiché sur le mobile
     }
+    /// ///////////////////////////qqrCode
+    @Override
+    protected String getEntityType() {
+        return "ARTICLE";
+    }
+
+    @Override
+    protected String getLabel(ArticleSec entity) {
+        return entity.getNom();   // le libellé affiché sur le mobile
+    }
+
+    @Override
+    protected String getStatus(ArticleSec entity) {
+        return entity.getActif() ? "ACTIF" : "INACTIF";
+    }
+
+    @Override
+    protected String getMobileRoute() {
+        return "/article/detail";
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public QrResolveResponse resolve(String publicCode) {
+        ArticleSec entity = articleRepository.findByQrHex(publicCode)
+                .orElseThrow(() -> new EntityNotFoundException("Article non trouvé pour le code : " + publicCode));
+
+        QrResolveResponse response = new QrResolveResponse();
+        response.setEntityType(getEntityType());
+        response.setPublicCode(publicCode);
+        response.setEntityId(entity.getId().toString());
+        response.setLabel(getLabel(entity));
+        response.setStatus(getStatus(entity));
+        response.setMobileRoute(getMobileRoute());
+        response.setData(convertToDto(entity));
+        return response;
+    }
 
     @Override
     protected String getStatus(ArticleSec entity) {
