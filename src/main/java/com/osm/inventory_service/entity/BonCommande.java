@@ -24,9 +24,6 @@ public class BonCommande extends BaseEntity {
     @Column(name = "numero_bc", unique = true, nullable = false)
     private String numeroBC;
 
-    @Column(name = "fournisseur", nullable = false)
-    private String fournisseur;
-
     @Column(name = "motif_refus")
     private String motifRefus;
 
@@ -40,7 +37,7 @@ public class BonCommande extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private StatutBonCommande status = StatutBonCommande.EN_ATTENTE;
 
-    @OneToMany(mappedBy = "bonCommande", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "bonCommande", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonManagedReference
     private List<LigneBonCommande> lignes = new ArrayList<>();
 

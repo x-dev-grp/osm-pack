@@ -96,33 +96,11 @@ public class StockSecController extends BaseControllerImpl<StockSec, StockSecDto
         }
     }
 
-    @PostMapping("/create")
-    public ResponseEntity<?> createStock(@RequestBody StockSecDto stockDto) {
-        try {
-            StockSecDto created = stockService.createStock(stockDto);
-            return new ResponseEntity<>(created, HttpStatus.CREATED);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
-        }
-    }
-
     @PostMapping("/article/{articleId}")
     public ResponseEntity<?> createStockForArticle(@PathVariable UUID articleId) {
         try {
             StockSecDto created = stockService.createStockForArticle(articleId);
             return new ResponseEntity<>(created, HttpStatus.CREATED);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateStock(@PathVariable UUID id, @RequestBody StockSecDto stockDto) {
-        try {
-            StockSecDto updated = stockService.updateStock(id, stockDto);
-            return ResponseEntity.ok(updated);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -201,17 +179,6 @@ public class StockSecController extends BaseControllerImpl<StockSec, StockSecDto
         }
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteStock(@PathVariable UUID id) {
-        try {
-            stockService.deleteStock(id);
-            return ResponseEntity.noContent().build();
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
-        }
-    }
-
     @GetMapping("/mouvements")
     public ResponseEntity<?> getAllMouvements() {
         try {
@@ -234,19 +201,13 @@ public class StockSecController extends BaseControllerImpl<StockSec, StockSecDto
         }
     }
 
-    @DeleteMapping("/article/{articleId}")
-    public ResponseEntity<?> deleteStockByArticle(@PathVariable UUID articleId) {
-        try {
-            stockService.deleteStockByArticle(articleId);
-            return ResponseEntity.noContent().build();
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
-        }
-    }
-
     @Override
     protected String getResourceName() {
         return "StockSec";
+    }
+
+    @Override
+    public ResponseEntity<?> resolve(String publicCode) {
+        return null;
     }
 }

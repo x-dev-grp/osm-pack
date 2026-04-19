@@ -24,7 +24,6 @@ public class LigneBonCommandeDto extends BaseDto<LigneBonCommande> implements Se
     String lastModifiedBy;
     LocalDateTime lastModifiedDate;
     UUID externalId;
-    BonCommandeDto bonCommande;
     ArticleSecDto article;
     Integer quantiteCommandee;
     Integer quantiteRecue;
