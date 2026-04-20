@@ -1,5 +1,6 @@
 package com.osm.inventory_service.controller;
 
+import com.osm.inventory_service.Enum.CategorieArticle;
 import com.osm.inventory_service.dto.ArticleSecDto;
 import com.osm.inventory_service.entity.ArticleSec;
 import com.osm.inventory_service.service.ArticleSecService;
@@ -33,14 +34,18 @@ public class ArticleSecController extends BaseControllerImpl<ArticleSec, Article
     }
 
     @GetMapping
-    public ResponseEntity<List<ArticleSecDto>> getAllArticles() {
+    public ResponseEntity<?> getAllArticles(@RequestParam(required = false) CategorieArticle categorie) {
         try {
-            List<ArticleSecDto> articles = articleService.getAllArticles();
-            System.out.println("Returning " + articles.size() + " articles");
+            List<ArticleSecDto> articles;
+            if (categorie != null) {
+                articles = articleService.getArticlesByCategorie(categorie);
+            } else {
+                articles = articleService.getAllArticles();
+            }
             return ResponseEntity.ok(articles);
         } catch (Exception e) {
-            // In case of unexpected error, return 500 or handle appropriately
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 

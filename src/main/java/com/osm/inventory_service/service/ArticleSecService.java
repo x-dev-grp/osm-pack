@@ -1,5 +1,9 @@
 package com.osm.inventory_service.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.osm.inventory_service.Enum.CategorieArticle;
+import com.osm.inventory_service.config.ArticleConfig;
 import com.osm.inventory_service.dto.ArticleSecDto;
 import com.osm.inventory_service.dto.FournisseurDto;
 import com.osm.inventory_service.entity.ArticleSec;
@@ -29,14 +33,23 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
     private final FournisseurRepository fournisseurRepository;
     private final ModelMapper modelMapper;
     private final StockSecService stockSecService;
+    private final ObjectMapper objectMapper;
+
     @Lazy
     @Autowired
-    public ArticleSecService(BaseRepository<ArticleSec> repository, ArticleSecRepository articleRepository, FournisseurRepository fournisseurRepository, SKURepository skuRepository, ModelMapper modelMapper, StockSecService stockSecService) {
+    public ArticleSecService(BaseRepository<ArticleSec> repository,
+                             ArticleSecRepository articleRepository,
+                             FournisseurRepository fournisseurRepository,
+                             SKURepository skuRepository,
+                             ModelMapper modelMapper,
+                             StockSecService stockSecService,
+                             ObjectMapper objectMapper) {
         super(repository, modelMapper);
         this.articleRepository = articleRepository;
         this.fournisseurRepository = fournisseurRepository;
         this.modelMapper = modelMapper;
         this.stockSecService = stockSecService;
+        this.objectMapper = objectMapper;
     }
 
     public ArticleSec getArticleEntityById(UUID id) {
@@ -65,6 +78,7 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         if (article.getStockMaximum() == null) {
             article.setStockMaximum(0);
         }
+        article.validateConfiguration();
 
         ArticleSec savedArticle = articleRepository.save(article);
         QrCodeInfo qrInfo = generateQrInfo(savedArticle.getId());
@@ -75,7 +89,7 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         try {
             stockSecService.createStockForArticle(savedArticle.getId());
         } catch (Exception e) {
-            System.err.println("Erreur lors de la création  du stock: " + e.getMessage());
+            System.err.println("Erreur lors de la création du stock: " + e.getMessage());
         }
 
         return convertToDto(savedArticle);
@@ -84,7 +98,7 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
     @Transactional
     public ArticleSecDto updateArticle(UUID id, ArticleSecDto articleDto) {
         ArticleSec existingArticle = getArticleEntityById(id);
-        if (!existingArticle.getNom().equals(articleDto.getNom()) && articleDto.getFournisseur()  != null) {
+        if (!existingArticle.getNom().equals(articleDto.getNom()) && articleDto.getFournisseur() != null) {
             Fournisseur fournisseur = fournisseurRepository.findById(articleDto.getFournisseur().getId()).orElse(null);
             if (fournisseur != null && articleRepository.existsByNomAndFournisseur(articleDto.getNom(), fournisseur)) {
                 throw new RuntimeException("Un article avec ce nom existe déjà pour ce fournisseur");
@@ -97,6 +111,14 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         existingArticle.setStockMaximum(articleDto.getStockMaximum());
         existingArticle.setActif(articleDto.getActif());
         existingArticle.setUm(articleDto.getUm());
+        if (articleDto.getConfiguration() != null) {
+            try {
+                ArticleConfig newConfig = objectMapper.convertValue(articleDto.getConfiguration(), ArticleConfig.class);
+                existingArticle.setConfiguration(newConfig);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Configuration invalide pour la catégorie " + articleDto.getCategorie(), e);
+            }
+        }
 
         if (articleDto.getFournisseur() != null) {
             if (existingArticle.getFournisseur() == null ||
@@ -108,16 +130,24 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         } else {
             existingArticle.setFournisseur(null);
         }
+        existingArticle.validateConfiguration();
+
         ArticleSec updatedArticle = articleRepository.save(existingArticle);
         return convertToDto(updatedArticle);
     }
+
     @Transactional(readOnly = true)
     public List<ArticleSecDto> getAllActiveArticles() {
         return articleRepository.findByActifTrue().stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
-
+    @Transactional(readOnly = true)
+    public List<ArticleSecDto> getArticlesByCategorie(CategorieArticle categorie) {
+        return articleRepository.findByCategorie(categorie).stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
 
     @Transactional
     public ArticleSecDto activerArticle(UUID id) {
@@ -136,9 +166,9 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
     }
 
     @Override
-    public Set<Action> actionsMapping(ArticleSec ArticleSec) {
+    public Set<Action> actionsMapping(ArticleSec articleSec) {
         Set<Action> actions = new HashSet<>();
-        actions.addAll(Set.of(Action.UPDATE, Action.DELETE, Action.READ,Action.CREATE,Action.ENTREE_STOCK,Action.SORTIE_STOCK));
+        actions.addAll(Set.of(Action.UPDATE, Action.DELETE, Action.READ, Action.CREATE, Action.ENTREE_STOCK, Action.SORTIE_STOCK));
         return actions;
     }
     private ArticleSec convertToEntity(ArticleSecDto dto) {
@@ -150,17 +180,30 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         } else {
             article.setFournisseur(null);
         }
+        if (dto.getConfiguration() != null) {
+            try {
+                ArticleConfig config = objectMapper.convertValue(dto.getConfiguration(), ArticleConfig.class);
+                article.setConfiguration(config);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Erreur de conversion de la configuration pour la catégorie " + dto.getCategorie(), e);
+            }
+        }
         return article;
     }
     private ArticleSecDto convertToDto(ArticleSec article) {
         ArticleSecDto dto = modelMapper.map(article, ArticleSecDto.class);
-
         if (article.getFournisseur() != null) {
             dto.setFournisseur(modelMapper.map(article.getFournisseur(), FournisseurDto.class));
         }
+        if (article.getConfiguration() != null) {
+            Map<String, Object> configMap = objectMapper.convertValue(
+                    article.getConfiguration(),
+                    new TypeReference<Map<String, Object>>() {}
+            );
+            dto.setConfiguration(configMap);
+        }
         return dto;
     }
-    /// ///////////////////////////qqrCode
     @Override
     protected String getEntityType() {
         return "ARTICLE";
@@ -168,7 +211,7 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
 
     @Override
     protected String getLabel(ArticleSec entity) {
-        return entity.getNom();   // le libellé affiché sur le mobile
+        return entity.getNom();
     }
 
     @Override
@@ -197,6 +240,4 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         response.setData(convertToDto(entity));
         return response;
     }
-
-
 }
