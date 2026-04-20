@@ -135,6 +135,7 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         ArticleSec updatedArticle = articleRepository.save(existingArticle);
         return convertToDto(updatedArticle);
     }
+    @Transactional(readOnly = true)
     public List<ArticleSecDto> getAllActiveArticles() {
         return articleRepository.findByActifTrue().stream()
                 .map(this::convertToDto)
@@ -201,6 +202,16 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
             dto.setConfiguration(configMap);
         }
         return dto;
+    }
+    /// ///////////////////////////qqrCode
+    @Override
+    protected String getEntityType() {
+        return "ARTICLE";
+    }
+
+    @Override
+    protected String getLabel(ArticleSec entity) {
+        return entity.getNom();   // le libellé affiché sur le mobile
     }
 
     @Override
