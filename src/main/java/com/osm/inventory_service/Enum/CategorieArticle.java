@@ -1,9 +1,12 @@
 package com.osm.inventory_service.Enum;
 
-public enum CategorieArticle {
-    EMBALLAGE,      // Bouteilles, bouchons, étiquettes, cartons
-    CONSOMMABLE,    // colles, films
+public enum  CategorieArticle {
+    EMBALLAGE,
+    CONSOMMABLE,
     MATIERE_PREMIERE,
-    ACCESSOIRE
-}
+    ACCESSOIRE,
+    UNITE,
+    COLIS,
+    PALETTE,
+    }
 
