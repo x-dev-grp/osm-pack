@@ -150,8 +150,6 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
                 .collect(Collectors.toList());
     }
 
-
-
     @Transactional
     public ArticleSecDto activerArticle(UUID id) {
         ArticleSec article = getArticleEntityById(id);
@@ -225,7 +223,7 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
 
     @Override
     protected String getLabel(ArticleSec entity) {
-        return entity.getNom();   // le libellé affiché sur le mobile
+        return entity.getNom();
     }
 
     @Override

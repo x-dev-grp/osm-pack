@@ -18,6 +18,7 @@ public interface ArticleSecRepository extends BaseRepository<ArticleSec> {
     boolean existsByNomAndFournisseur(String nom, Fournisseur fournisseur);
 
     List<ArticleSec> findByActifTrue();
+    List<ArticleSec> findByCategorie(CategorieArticle categorie);
 
     List<ArticleSec> findByCategorie(CategorieArticle categorie);
 
