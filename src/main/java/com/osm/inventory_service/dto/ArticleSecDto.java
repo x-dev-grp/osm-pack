@@ -11,6 +11,7 @@ import lombok.Setter;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Getter
@@ -35,5 +36,6 @@ public class ArticleSecDto extends BaseDto<ArticleSec> implements Serializable {
   private String publicCode;
   private String qrUrl;
   private String qrImageBase64;
+  private Map<String, Object> configuration;
 
 }
