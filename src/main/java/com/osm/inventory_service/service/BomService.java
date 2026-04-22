@@ -9,8 +9,7 @@ import com.osm.inventory_service.entity.SKU;
 import com.osm.inventory_service.repository.ArticleSecRepository;
 import com.osm.inventory_service.repository.BomRepository;
 import com.osm.inventory_service.repository.SKURepository;
-import com.xdev.xdevbase.qr.Component.CodeGenerator;
-import com.xdev.xdevbase.qr.Component.QrConfig;
+import com.xdev.xdevbase.qr.CodeGenerator;
 import com.xdev.xdevbase.repos.BaseRepository;
 import com.xdev.xdevbase.services.impl.BaseServiceImpl;
 import org.modelmapper.ModelMapper;
@@ -30,8 +29,8 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
     private final ArticleSecRepository articleRepository;
 
     @Autowired
-    public BomService(BaseRepository<BOM> repository, BomRepository bomRepository, SKURepository skuRepository, CodeGenerator codeGenerator, QrConfig qrConfig, ArticleSecRepository articleRepository, ModelMapper modelMapper) {
-        super(repository, codeGenerator, qrConfig, modelMapper);
+    public BomService(BaseRepository<BOM> repository, BomRepository bomRepository, SKURepository skuRepository, CodeGenerator codeGenerator,  ArticleSecRepository articleRepository, ModelMapper modelMapper) {
+        super(repository, codeGenerator, modelMapper);
         this.bomRepository = bomRepository;
         this.skuRepository = skuRepository;
         this.articleRepository = articleRepository;
