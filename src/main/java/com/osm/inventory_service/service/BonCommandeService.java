@@ -11,8 +11,7 @@ import com.osm.inventory_service.entity.BonCommande;
 import com.osm.inventory_service.entity.LigneBonCommande;
 import com.osm.inventory_service.repository.BonCommandeRepository;
 import com.osm.inventory_service.repository.LigneBonCommandeRepository;
-import com.xdev.xdevbase.qr.Component.CodeGenerator;
-import com.xdev.xdevbase.qr.Component.QrConfig;
+import com.xdev.xdevbase.qr.CodeGenerator;
 import com.xdev.xdevbase.repos.BaseRepository;
 import com.xdev.xdevbase.services.impl.BaseServiceImpl;
 import org.modelmapper.ModelMapper;
@@ -45,7 +44,6 @@ public class BonCommandeService extends BaseServiceImpl<BonCommande, BonCommande
                               ArticleSecService articleSecService,
                               StockSecService stockSecService,
                               CodeGenerator codeGenerator,
-                              QrConfig qrConfig,
                               ModelMapper modelMapper) {
         super(repository, modelMapper);
         this.bonCommandeRepository = bonCommandeRepository;
