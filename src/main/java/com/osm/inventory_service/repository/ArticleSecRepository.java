@@ -21,4 +21,6 @@ public interface ArticleSecRepository extends BaseRepository<ArticleSec> {
     List<ArticleSec> findByCategorie(CategorieArticle categorie);
 
 
+    List<ArticleSec> findByCategorie(CategorieArticle categorie);
+
 }

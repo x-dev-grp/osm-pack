@@ -134,9 +134,7 @@ public class ArticleSecController extends BaseControllerImpl<ArticleSec, Article
     @GetMapping("/{id}/qr-image")
     public ResponseEntity<byte[]> getQrImage(@PathVariable UUID id) {
         ArticleSec entity = articleService.getArticleEntityById(id);
-        byte[] image;
-         image = articleService.generateQrImage(entity.getQrHex());
-
+        byte[]  image = articleService.generateQrImage(entity.getQrHex());
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_PNG)
                 .body(image);
