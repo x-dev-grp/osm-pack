@@ -145,4 +145,7 @@ public class ArticleSecController extends BaseControllerImpl<ArticleSec, Article
                 .contentType(MediaType.IMAGE_PNG)
                 .body(image);
     }
+
+
+
 }

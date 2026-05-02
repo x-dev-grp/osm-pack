@@ -1,13 +1,13 @@
 
 
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${SERVER_PORT:1234}
   max-http-request-header-size: 32KB
 
 
 spring:
   application:
-    name: ${SPRING_APP_NAME:abiooc-inventaire}
+    name: ${SPRING_APP_NAME:inventory-service}
 
   main:
     banner-mode: console
