@@ -20,6 +20,8 @@ import jakarta.persistence.EntityNotFoundException;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -81,7 +83,7 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         article.validateConfiguration();
 
         ArticleSec savedArticle = articleRepository.save(article);
-        QrCodeInfo qrInfo = generateQrInfo(savedArticle.getId());
+        QrCodeInfo qrInfo = generateQrInfo("ARTICLE", savedArticle.getId());
         ArticleSecDto result = convertToDto(savedArticle);
         result.setPublicCode(qrInfo.getPublicCode());
         result.setQrUrl(qrInfo.getQrUrl());
@@ -148,6 +150,8 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
+
+
 
     @Transactional
     public ArticleSecDto activerArticle(UUID id) {
