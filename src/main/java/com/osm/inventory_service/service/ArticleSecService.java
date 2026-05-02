@@ -205,9 +205,6 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         }
         return dto;
     }
-
-
-      /// ///////////////////////////qqrCode
     @Override
     protected String getEntityType() {
         return "ARTICLE";
@@ -244,5 +241,4 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         response.setData(convertToDto(entity));
         return response;
     }
-
 }
