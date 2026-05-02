@@ -9,6 +9,9 @@ import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.envers.Audited;
 import org.hibernate.type.SqlTypes;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -42,6 +45,16 @@ public class ArticleSec extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     private UniteMesure um;
+
+    // Dans com.osm.inventory_service.entity.ArticleSec
+    @Column(name = "sku_id")
+    private UUID skuId;
+
+    @Column(name = "lot_created_date")
+    private LocalDateTime lotCreatedDate;
+
+    @Column(name = "lot_ddm")
+    private LocalDate lotDdm;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
