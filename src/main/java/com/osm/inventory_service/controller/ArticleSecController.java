@@ -135,12 +135,8 @@ public class ArticleSecController extends BaseControllerImpl<ArticleSec, Article
     public ResponseEntity<byte[]> getQrImage(@PathVariable UUID id) {
         ArticleSec entity = articleService.getArticleEntityById(id);
         byte[] image;
-        if (entity.getQrHex() == null || entity.getQrHex().isBlank()) {
-            // Génération à la volée (si jamais l'entité n'a pas encore de QR)
-            image = articleService.generateQrImageFromEntity(entity); // à implémenter
-        } else {
-            image = articleService.generateQrImage(entity.getQrHex());
-        }
+         image = articleService.generateQrImage(entity.getQrHex());
+
         return ResponseEntity.ok()
                 .contentType(MediaType.IMAGE_PNG)
                 .body(image);
