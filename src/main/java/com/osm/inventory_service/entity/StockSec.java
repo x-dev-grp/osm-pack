@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.envers.Audited;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "stocks_secs")
 @Data
@@ -25,6 +27,13 @@ public class StockSec extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "emplacement_id")
     private EmplacementStock emplacement;
+
+    //expedition
+    @Column(name = "reserve_pour")
+    private String reservePour;
+
+    @Column(name = "reserve_date")
+    private LocalDateTime reserveDate;
 
 
 }
