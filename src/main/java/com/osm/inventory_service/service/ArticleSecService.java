@@ -137,7 +137,6 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         ArticleSec updatedArticle = articleRepository.save(existingArticle);
         return convertToDto(updatedArticle);
     }
-
     @Transactional(readOnly = true)
     public List<ArticleSecDto> getAllActiveArticles() {
         return articleRepository.findByActifTrue().stream()
@@ -150,8 +149,6 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
-
-
 
     @Transactional
     public ArticleSecDto activerArticle(UUID id) {
