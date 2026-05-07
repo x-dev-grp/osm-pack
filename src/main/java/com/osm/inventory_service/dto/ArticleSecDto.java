@@ -38,4 +38,5 @@ public class ArticleSecDto extends BaseDto<ArticleSec> implements Serializable {
   private String qrImageBase64;
   private Map<String, Object> configuration;
 
+
 }
