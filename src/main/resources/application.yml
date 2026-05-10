@@ -1,6 +1,9 @@
 server:
   port: ${SERVER_PORT:1234}
   max-http-request-header-size: 32KB
+  error:
+    include-message: always
+    include-binding-errors: always
 
 
 spring:
