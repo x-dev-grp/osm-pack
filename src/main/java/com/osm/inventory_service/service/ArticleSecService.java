@@ -10,7 +10,6 @@ import com.osm.inventory_service.entity.ArticleSec;
 import com.osm.inventory_service.entity.Fournisseur;
 import com.osm.inventory_service.repository.ArticleSecRepository;
 import com.osm.inventory_service.repository.FournisseurRepository;
-import com.osm.inventory_service.repository.SKURepository;
 import com.xdev.xdevbase.models.Action;
 import com.xdev.xdevbase.qr.model.QrCodeInfo;
 import com.xdev.xdevbase.qr.model.QrResolveResponse;
@@ -42,7 +41,6 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
     public ArticleSecService(BaseRepository<ArticleSec> repository,
                              ArticleSecRepository articleRepository,
                              FournisseurRepository fournisseurRepository,
-                             SKURepository skuRepository,
                              ModelMapper modelMapper,
                              StockSecService stockSecService,
                              ObjectMapper objectMapper) {

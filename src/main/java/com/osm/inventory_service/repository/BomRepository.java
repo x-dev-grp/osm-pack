@@ -9,5 +9,5 @@ import java.util.UUID;
 
 @Repository
 public interface BomRepository extends BaseRepository<BOM> {
-    List<BOM> findBySkuId(UUID skuId);
+    List<BOM> findByProductId(UUID productId);
 }

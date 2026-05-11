@@ -51,10 +51,10 @@ public class BomController extends BaseControllerImpl<BOM, BOMDto, BOMDto> {
         }
     }
 
-    @GetMapping("/sku/{skuId}")
-    public ResponseEntity<?> getBomsBySku(@PathVariable UUID skuId) {
+    @GetMapping({"/product/{productId}", "/sku/{productId}"})
+    public ResponseEntity<?> getBomsByProduct(@PathVariable UUID productId) {
         try {
-            List<BOMDto> boms = bomService.getBomsBySku(skuId);
+            List<BOMDto> boms = bomService.getBomsByProduct(productId);
             return ResponseEntity.ok(boms);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
