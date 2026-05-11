@@ -32,7 +32,6 @@ public class AuditService {
                 BOM.class,
                 BomLine.class,
                 BonCommande.class,
-                Client.class,
                 EmplacementStock.class,
                 Fournisseur.class,
                 LigneBonCommande.class,
@@ -71,6 +70,16 @@ public class AuditService {
                 result.add(dto);
             });
         });
+        
+        result.sort((a, b) -> {
+            Integer revA = a.getRevision();
+            Integer revB = b.getRevision();
+            if (revA == null && revB == null) return 0;
+            if (revA == null) return 1;
+            if (revB == null) return -1;
+            return revB.compareTo(revA);
+        });
+        
         return result;
     }
 }

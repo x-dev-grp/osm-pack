@@ -1,5 +1,6 @@
 package com.osm.inventory_service.entity;
 
+import com.osm.inventory_service.Enum.CategorieArticle;
 import com.osm.inventory_service.Enum.TypeEmplacement;
 import com.xdev.xdevbase.entities.BaseEntity;
 import jakarta.persistence.*;
@@ -55,5 +56,9 @@ public class EmplacementStock extends BaseEntity {
     @Column(length = 1000)
     private String notes;
     private Boolean actif = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "categorie_article_stocke")
+    private CategorieArticle categorieArticleStocke;
 
 }

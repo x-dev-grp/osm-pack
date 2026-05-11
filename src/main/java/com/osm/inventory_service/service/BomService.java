@@ -54,14 +54,18 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
 
     @Transactional
     public BOMDto createBom(BOMDto bomDto) {
-        SKU sku = skuRepository.findById(bomDto.getSkuId()).orElseThrow(() -> new RuntimeException("SKU non trouvé avec l'id : " + bomDto.getSkuId()));
+        SKU sku = skuRepository.findById(bomDto.getSkuId())
+                .orElseThrow(() -> new RuntimeException("SKU non trouvé avec l'id : " + bomDto.getSkuId()));
+        int count = bomRepository.findBySkuId(bomDto.getSkuId()).size();
+        String version = "V" + (count + 1);
 
         BOM bom = new BOM();
         bom.setSku(sku);
-        bom.setVersion(bomDto.getVersion());
+        bom.setVersion(version);
 
         List<BomLine> lines = bomDto.getLines().stream().map(lineDto -> {
-            ArticleSec article = articleRepository.findById(lineDto.getArticleId()).orElseThrow(() -> new RuntimeException("Article non trouvé avec l'id : " + lineDto.getArticleId()));
+            ArticleSec article = articleRepository.findById(lineDto.getArticleId())
+                    .orElseThrow(() -> new RuntimeException("Article non trouvé avec l'id : " + lineDto.getArticleId()));
             BomLine line = new BomLine();
             line.setBom(bom);
             line.setArticle(article);

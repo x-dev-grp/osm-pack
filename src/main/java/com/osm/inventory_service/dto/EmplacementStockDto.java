@@ -1,5 +1,6 @@
 package com.osm.inventory_service.dto;
 
+import com.osm.inventory_service.Enum.CategorieArticle;
 import com.osm.inventory_service.Enum.TypeEmplacement;
 import com.osm.inventory_service.entity.EmplacementStock;
 import com.xdev.xdevbase.dtos.BaseDto;
@@ -29,4 +30,5 @@ public class EmplacementStockDto extends BaseDto<EmplacementStock> implements Se
     private String description;
     private String notes;
     private Boolean actif = true;
+    private CategorieArticle categorieArticleStocke;
 }

@@ -5,6 +5,7 @@ import com.osm.inventory_service.entity.EmplacementStock;
 import com.osm.inventory_service.repository.EmplacementStockRepository;
 import com.xdev.xdevbase.repos.BaseRepository;
 import com.xdev.xdevbase.services.impl.BaseServiceImpl;
+import jakarta.validation.ValidationException;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static com.xdev.communicator.feignServices.BaseFeignService.log;
 
 @Service
 public class EmplacementStockService extends BaseServiceImpl<EmplacementStock, EmplacementStockDto, EmplacementStockDto> {
@@ -44,6 +47,12 @@ public class EmplacementStockService extends BaseServiceImpl<EmplacementStock, E
 
     @Transactional
     public EmplacementStockDto createEmplacement(EmplacementStockDto emplacementDto) {
+        if (emplacementDto.getNom() == null || emplacementDto.getNom().trim().isEmpty()) {
+            throw new ValidationException("Le nom de l'emplacement est obligatoire");
+        }
+        if (emplacementDto.getTypeEmplacement() == null) {
+            throw new ValidationException("Le type d'emplacement est obligatoire");
+        }
         EmplacementStock emplacement = modelMapper.map(emplacementDto, EmplacementStock.class);
         emplacement.setCode(generateUniqueCode());
         if (emplacement.getDisponible() == null) {
@@ -52,9 +61,32 @@ public class EmplacementStockService extends BaseServiceImpl<EmplacementStock, E
         if (emplacement.getCapaciteActuelle() == null) {
             emplacement.setCapaciteActuelle("0");
         }
-        emplacement.setActif(true);
+        if (emplacement.getCategorieArticleStocke() != null) {
+            if (emplacement.getCapaciteMaximale() != null) {
+                try {
+                    double capaciteMax = Double.parseDouble(emplacement.getCapaciteMaximale());
+                    if (capaciteMax <= 0) {
+                        throw new ValidationException("La capacité maximale doit être supérieure à 0");
+                    }
+                } catch (NumberFormatException e) {
+                    throw new ValidationException("La capacité maximale doit être un nombre valide");
+                }
+            }
+        }
+        if (emplacement.getTemperatureMin() != null && emplacement.getTemperatureMax() != null) {
+            if (emplacement.getTemperatureMin() > emplacement.getTemperatureMax()) {
+                throw new ValidationException("La température minimale ne peut pas être supérieure à la température maximale");
+            }
+        }
 
+        emplacement.setActif(true);
         EmplacementStock savedEmplacement = emplacementRepository.save(emplacement);
+        log.info("Emplacement créé avec succès - ID: {}, Code: {}, Type: {}, Catégorie: {}",
+                savedEmplacement.getId(),
+                savedEmplacement.getCode(),
+                savedEmplacement.getTypeEmplacement(),
+                savedEmplacement.getCategorieArticleStocke());
+
         return modelMapper.map(savedEmplacement, EmplacementStockDto.class);
     }
     @Transactional
@@ -87,6 +119,7 @@ public class EmplacementStockService extends BaseServiceImpl<EmplacementStock, E
         }
         existingEmplacement.setNom(emplacementDto.getNom());
         existingEmplacement.setTypeEmplacement(emplacementDto.getTypeEmplacement());
+        existingEmplacement.setCategorieArticleStocke(emplacementDto.getCategorieArticleStocke());  // ✅ NOUVEAU
         existingEmplacement.setCapaciteMaximale(emplacementDto.getCapaciteMaximale());
         existingEmplacement.setCapaciteActuelle(emplacementDto.getCapaciteActuelle());
         existingEmplacement.setZone(emplacementDto.getZone());
