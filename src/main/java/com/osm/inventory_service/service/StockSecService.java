@@ -217,9 +217,44 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
         EmplacementStock emplacement = emplacementRepository.findById(emplacementId)
                 .orElseThrow(() -> new RuntimeException("Emplacement non trouvé"));
 
+        // Validation de la catégorie
+        validateEmplacementCategorie(stock, emplacement);
+
         stock.setEmplacement(emplacement);
         StockSec updatedStock = stockRepository.save(stock);
         return convertToDto(updatedStock);
+    }
+
+    @Transactional
+    public StockSecDto transfererEmplacement(UUID stockId, UUID nouvelEmplacementId) {
+        StockSec stock = getStockEntityById(stockId);
+        EmplacementStock nouvelEmplacement = emplacementRepository.findById(nouvelEmplacementId)
+                .orElseThrow(() -> new RuntimeException("Emplacement non trouvé"));
+
+        // Validation de la catégorie
+        validateEmplacementCategorie(stock, nouvelEmplacement);
+
+        stock.setEmplacement(nouvelEmplacement);
+        StockSec updatedStock = stockRepository.save(stock);
+        return convertToDto(updatedStock);
+    }
+
+    private void validateEmplacementCategorie(StockSec stock, EmplacementStock emplacement) {
+        if (emplacement.getCategorieArticleStocke() != null) {
+            ArticleSec article = stock.getArticle();
+            if (article == null) {
+                throw new RuntimeException("Le stock n'a pas d'article associé");
+            }
+            if (!article.getCategorie().equals(emplacement.getCategorieArticleStocke())) {
+                throw new RuntimeException(
+                        String.format("L'emplacement '%s' accepte uniquement les articles de catégorie '%s', " +
+                                        "mais l'article est de catégorie '%s'",
+                                emplacement.getNom() != null ? emplacement.getNom() : emplacement.getCode(),
+                                emplacement.getCategorieArticleStocke(),
+                                article.getCategorie())
+                );
+            }
+        }
     }
 
     @Transactional
@@ -230,17 +265,6 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
         return convertToDto(updatedStock);
     }
 
-    @Transactional
-    public StockSecDto transfererEmplacement(UUID stockId, UUID nouvelEmplacementId) {
-        StockSec stock = getStockEntityById(stockId);
-
-        EmplacementStock nouvelEmplacement = emplacementRepository.findById(nouvelEmplacementId)
-                .orElseThrow(() -> new RuntimeException("Emplacement non trouvé"));
-
-        stock.setEmplacement(nouvelEmplacement);
-        StockSec updatedStock = stockRepository.save(stock);
-        return convertToDto(updatedStock);
-    }
     @Override
     public Set<Action> actionsMapping(StockSec StockSec) {
         Set<Action> actions = new HashSet<>();

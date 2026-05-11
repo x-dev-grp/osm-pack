@@ -203,6 +203,9 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
             );
             dto.setConfiguration(configMap);
         }
+        dto.setPublicCode(article.getQrHex());
+        dto.setQrImageBase64(article.getQrImageBase64());
+
         return dto;
     }
     @Override
