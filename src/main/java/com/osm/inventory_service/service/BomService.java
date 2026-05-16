@@ -111,18 +111,34 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
         return bomRepository.findAll().stream().map(this::convertToDto).collect(Collectors.toList());
     }
 
+    @Transactional
+    public void deleteBom(UUID id) {
+        if (!bomRepository.existsById(id)) {
+            throw new RuntimeException("BOM non trouvee avec l'id : " + id);
+        }
+        bomRepository.deleteById(id);
+    }
+
     private BOMDto convertToDto(BOM bom) {
         BOMDto dto = new BOMDto();
         dto.setId(bom.getId());
-        dto.setProductId(bom.getProduct().getId());
-        dto.setProductName(bom.getProduct().getName());
+        if (bom.getProduct() != null) {
+            dto.setProductId(bom.getProduct().getId());
+            dto.setProductName(bom.getProduct().getName());
+        } else {
+            dto.setProductName("Produit non assigné");
+        }
         dto.setVersion(bom.getVersion());
 
         List<BomLineDto> lineDtos = bom.getLines().stream().map(line -> {
             BomLineDto lineDto = new BomLineDto();
             lineDto.setId(line.getId());
-            lineDto.setArticleId(line.getArticle().getId());
-            lineDto.setArticleName(line.getArticle().getNom());
+            if (line.getArticle() != null) {
+                lineDto.setArticleId(line.getArticle().getId());
+                lineDto.setArticleName(line.getArticle().getNom());
+            } else {
+                lineDto.setArticleName("Article inconnu");
+            }
             lineDto.setQuantity(line.getQuantity());
             lineDto.setUnitOfMeasure(line.getUnitOfMeasure());
             return lineDto;
