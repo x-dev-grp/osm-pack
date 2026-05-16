@@ -146,6 +146,43 @@ public class StockSecController extends BaseControllerImpl<StockSec, StockSecDto
         }
     }
 
+    @PutMapping("/{articleId}/reserver")
+    public ResponseEntity<?> reserverStock(@PathVariable UUID articleId, @RequestBody Map<String, Object> payload) {
+        try {
+            Integer quantite = (Integer) payload.get("quantite");
+            StockSecDto result = stockService.reserverStock(articleId, quantite);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{articleId}/annuler-reservation")
+    public ResponseEntity<?> annulerReservation(@PathVariable UUID articleId, @RequestBody Map<String, Object> payload) {
+        try {
+            Integer quantite = (Integer) payload.get("quantite");
+            StockSecDto result = stockService.annulerReservation(articleId, quantite);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{articleId}/consommer-reservation")
+    public ResponseEntity<?> consommerReservation(@PathVariable UUID articleId, @RequestBody Map<String, Object> payload) {
+        try {
+            Integer quantite = (Integer) payload.get("quantite");
+            String motif = (String) payload.get("motif");
+            StockSecDto result = stockService.consommerReservation(articleId, quantite, motif);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PutMapping("/{stockId}/assigner-emplacement/{emplacementId}")
     public ResponseEntity<?> assignerEmplacement(@PathVariable UUID stockId, @PathVariable UUID emplacementId) {
         try {

@@ -46,6 +46,12 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
     private StockSecDto convertToDto(StockSec stock) {
         StockSecDto dto = modelMapper.map(stock, StockSecDto.class);
 
+        dto.setQuantiteReservee(stock.getQuantiteReservee() != null ? stock.getQuantiteReservee() : 0);
+        dto.setQuantiteDisponible(
+                (stock.getQuantiteActuelle() != null ? stock.getQuantiteActuelle() : 0) -
+                (stock.getQuantiteReservee() != null ? stock.getQuantiteReservee() : 0)
+        );
+
         if (stock.getArticle() != null) {
             dto.setArticleId(stock.getArticle().getId());
             dto.setArticle(articleSecService.getArticleById(stock.getArticle().getId()));
@@ -57,6 +63,95 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
         }
 
         return dto;
+    }
+
+    @Transactional
+    public StockSecDto reserverStock(UUID articleId, Integer quantite) {
+        if (articleId == null) {
+            throw new RuntimeException("L'identifiant de l'article est obligatoire");
+        }
+        if (quantite == null || quantite <= 0) {
+            throw new RuntimeException("La quantité de réservation doit être positive");
+        }
+
+        StockSec stock = stockRepository.findByArticleId(articleId)
+                .orElseThrow(() -> new RuntimeException("Aucun stock trouvé pour cet article"));
+
+        Integer quantiteActuelle = stock.getQuantiteActuelle() != null ? stock.getQuantiteActuelle() : 0;
+        Integer quantiteReservee = stock.getQuantiteReservee() != null ? stock.getQuantiteReservee() : 0;
+
+        if (quantiteActuelle - quantiteReservee < quantite) {
+            throw new RuntimeException("Stock disponible insuffisant pour la réservation. Disponible: " + (quantiteActuelle - quantiteReservee));
+        }
+
+        stock.setQuantiteReservee(quantiteReservee + quantite);
+        StockSec updatedStock = stockRepository.save(stock);
+        return convertToDto(updatedStock);
+    }
+
+    @Transactional
+    public StockSecDto annulerReservation(UUID articleId, Integer quantite) {
+        if (articleId == null) {
+            throw new RuntimeException("L'identifiant de l'article est obligatoire");
+        }
+        if (quantite == null || quantite <= 0) {
+            throw new RuntimeException("La quantité d'annulation doit être positive");
+        }
+
+        StockSec stock = stockRepository.findByArticleId(articleId)
+                .orElseThrow(() -> new RuntimeException("Aucun stock trouvé pour cet article"));
+
+        Integer quantiteReservee = stock.getQuantiteReservee() != null ? stock.getQuantiteReservee() : 0;
+
+        if (quantiteReservee < quantite) {
+            stock.setQuantiteReservee(0);
+        } else {
+            stock.setQuantiteReservee(quantiteReservee - quantite);
+        }
+
+        StockSec updatedStock = stockRepository.save(stock);
+        return convertToDto(updatedStock);
+    }
+
+    @Transactional
+    public StockSecDto consommerReservation(UUID articleId, Integer quantite, String motif) {
+        if (articleId == null) {
+            throw new RuntimeException("L'identifiant de l'article est obligatoire");
+        }
+        if (quantite == null || quantite <= 0) {
+            throw new RuntimeException("La quantité de consommation doit être positive");
+        }
+
+        StockSec stock = stockRepository.findByArticleId(articleId)
+                .orElseThrow(() -> new RuntimeException("Aucun stock trouvé pour cet article"));
+
+        Integer quantiteActuelle = stock.getQuantiteActuelle() != null ? stock.getQuantiteActuelle() : 0;
+        Integer quantiteReservee = stock.getQuantiteReservee() != null ? stock.getQuantiteReservee() : 0;
+
+        if (quantiteActuelle < quantite) {
+            throw new RuntimeException("Stock actuel insuffisant pour la consommation. Disponible: " + quantiteActuelle);
+        }
+
+        // Decrease both total stock and reserved stock
+        stock.setQuantiteActuelle(quantiteActuelle - quantite);
+
+        if (quantiteReservee < quantite) {
+            stock.setQuantiteReservee(0);
+        } else {
+            stock.setQuantiteReservee(quantiteReservee - quantite);
+        }
+
+        StockSec updatedStock = stockRepository.save(stock);
+
+        MouvementStockSec mouvement = new MouvementStockSec();
+        mouvement.setArticle(stock.getArticle());
+        mouvement.setQuantite(quantite);
+        mouvement.setTypeMouvement(TypeMouvement.SORTIE);
+        mouvement.setMotif(motif + " (Consommation Réservée)");
+        mouvement.setDateMouvement(LocalDateTime.now());
+        mouvementStockSecRepository.save(mouvement);
+
+        return convertToDto(updatedStock);
     }
 
     public StockSec getStockEntityById(UUID id) {
@@ -136,10 +231,13 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
         StockSec stock = stockRepository.findByArticleId(articleId)
                 .orElseThrow(() -> new RuntimeException("Aucun stock trouvé pour cet article"));
         Integer quantiteActuelle = stock.getQuantiteActuelle() != null ? stock.getQuantiteActuelle() : 0;
-        if (quantiteActuelle < quantite) {
+        Integer quantiteReservee = stock.getQuantiteReservee() != null ? stock.getQuantiteReservee() : 0;
+        Integer quantiteDisponible = quantiteActuelle - quantiteReservee;
+
+        if (quantiteDisponible < quantite) {
             throw new RuntimeException(
-                    "Stock insuffisant. Disponible: " + quantiteActuelle +
-                            ", Demandé: " + quantite
+                    "Stock disponible insuffisant (hors reservations). Disponible: " + quantiteDisponible +
+                            ", Demande: " + quantite
             );
         }
         stock.setQuantiteActuelle(quantiteActuelle - quantite);

@@ -7,7 +7,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.envers.Audited;
 
-import java.math.BigDecimal;
 @Getter
 @Setter
 @Audited
@@ -22,7 +21,7 @@ public class BomLine extends BaseEntity {
     @JoinColumn(name = "articleSec_id")
     private ArticleSec article;
 
-    private BigDecimal quantity;
+    private double quantity;
     @Enumerated(EnumType.STRING)
     private UniteMesure unitOfMeasure;
 }

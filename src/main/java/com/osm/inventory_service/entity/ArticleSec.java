@@ -79,8 +79,6 @@ public class ArticleSec extends BaseEntity {
         if (config instanceof PaletteConfig) return CategorieArticle.PALETTE;
         if (config instanceof EmballageConfig) return CategorieArticle.EMBALLAGE;
         if (config instanceof ConsommableConfig) return CategorieArticle.CONSOMMABLE;
-        if (config instanceof MatierePremiereConfig) return CategorieArticle.MATIERE_PREMIERE;
-        if (config instanceof AccessoireConfig) return CategorieArticle.ACCESSOIRE;
         throw new IllegalStateException("Type de configuration inconnu");
     }
 

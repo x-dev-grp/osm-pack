@@ -13,9 +13,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
         @JsonSubTypes.Type(value = ColisConfig.class, name = "COLIS"),
         @JsonSubTypes.Type(value = PaletteConfig.class, name = "PALETTE"),
         @JsonSubTypes.Type(value = EmballageConfig.class, name = "EMBALLAGE"),
-        @JsonSubTypes.Type(value = ConsommableConfig.class, name = "CONSOMMABLE"),
-        @JsonSubTypes.Type(value = MatierePremiereConfig.class, name = "MATIERE_PREMIERE"),
-        @JsonSubTypes.Type(value = AccessoireConfig.class, name = "ACCESSOIRE")
+        @JsonSubTypes.Type(value = ConsommableConfig.class, name = "CONSOMMABLE")
 })
 public interface ArticleConfig {
 }
