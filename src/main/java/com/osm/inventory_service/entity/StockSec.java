@@ -35,5 +35,8 @@ public class StockSec extends BaseEntity {
     @Column(name = "reserve_date")
     private LocalDateTime reserveDate;
 
+    @Column(name = "quantite_reservee", nullable = false)
+    private Integer quantiteReservee = 0;
+
 
 }

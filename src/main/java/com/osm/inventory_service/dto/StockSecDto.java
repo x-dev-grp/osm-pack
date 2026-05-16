@@ -19,6 +19,8 @@ public class StockSecDto extends BaseDto<StockSec> implements Serializable {
     private UUID articleId;
     private ArticleSecDto article;
     private Integer quantiteActuelle;
+    private Integer quantiteReservee;
+    private Integer quantiteDisponible;
     private UUID emplacementId;
     private EmplacementStockDto emplacement;
 }

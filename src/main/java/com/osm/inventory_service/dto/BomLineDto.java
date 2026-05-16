@@ -21,7 +21,7 @@ public class BomLineDto  extends BaseDto<BomLine> implements Serializable {
     private ArticleSec article;
     private UUID articleId;
     private String articleName;
-    private BigDecimal quantity;
+    private double quantity;
     private UniteMesure unitOfMeasure;
 
 }
