@@ -85,6 +85,17 @@ public class BomController extends BaseControllerImpl<BOM, BOMDto, BOMDto> {
         }
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteBom(@PathVariable UUID id) {
+        try {
+            bomService.deleteBom(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @Override
     protected String getResourceName() {
         return "BOM";
