@@ -2,7 +2,7 @@ package com.osm.inventory_service.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.osm.inventory_service.entity.Product;
+import com.osm.inventory_service.entity.ProduitFinal;
 import com.osm.inventory_service.entity.ProductType;
 import com.xdev.xdevbase.dtos.BaseDto;
 import lombok.Data;
@@ -16,7 +16,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @Data
-public class ProductDto extends BaseDto<Product> implements Serializable {
+public class ProduitFinalDto extends BaseDto<ProduitFinal> implements Serializable {
     UUID id;
     UUID tenantId;
     Boolean isDeleted;

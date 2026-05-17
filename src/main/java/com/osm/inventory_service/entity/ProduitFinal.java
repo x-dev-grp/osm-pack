@@ -14,7 +14,7 @@ import org.hibernate.envers.Audited;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Product extends BaseEntity {
+public class ProduitFinal extends BaseEntity {
 
     @Column(nullable = false)
     private String name;

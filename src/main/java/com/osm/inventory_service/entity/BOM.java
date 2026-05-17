@@ -16,7 +16,7 @@ import java.util.List;
 public class BOM extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "sku_id")
-    private Product product;
+    private ProduitFinal produitFinal;
     private String version;
     @OneToMany(mappedBy = "bom", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BomLine> lines = new ArrayList<>();
