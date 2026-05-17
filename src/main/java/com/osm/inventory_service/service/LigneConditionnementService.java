@@ -110,10 +110,7 @@ public class LigneConditionnementService extends BaseServiceImpl<LigneConditionn
     }
 
     private String genererCodeLigne() {
-        String prefix = "LIG";
-        String date = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String random = String.format("%04d", (int) (Math.random() * 10000));
-        return prefix + "-" + date + "-" + random;
+        return generateBusinessCode("code", "LI");
     }
 
 

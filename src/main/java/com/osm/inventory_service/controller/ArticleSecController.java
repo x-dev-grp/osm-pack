@@ -42,7 +42,7 @@ public class ArticleSecController extends BaseControllerImpl<ArticleSec, Article
             } else {
                 articles = articleService.getAllArticles();
             }
-            return ResponseEntity.ok(articles);
+            return ResponseEntity.ok(attachPermittedActions(articles));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", e.getMessage()));
@@ -53,7 +53,7 @@ public class ArticleSecController extends BaseControllerImpl<ArticleSec, Article
     public ResponseEntity<?> getActiveArticles() {
         try {
             List<ArticleSecDto> activeArticles = articleService.getAllActiveArticles();
-            return ResponseEntity.ok(activeArticles);
+            return ResponseEntity.ok(attachPermittedActions(activeArticles));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -64,7 +64,7 @@ public class ArticleSecController extends BaseControllerImpl<ArticleSec, Article
     public ResponseEntity<?> getArticleById(@PathVariable UUID id) {
         try {
             ArticleSecDto article = articleService.getArticleById(id);
-            return ResponseEntity.ok(article);
+            return ResponseEntity.ok(attachPermittedActions(article));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", e.getMessage()));
@@ -75,7 +75,7 @@ public class ArticleSecController extends BaseControllerImpl<ArticleSec, Article
     public ResponseEntity<?> createArticle(@RequestBody ArticleSecDto articleDto) {
         try {
             ArticleSecDto created = articleService.createArticle(articleDto);
-            return new ResponseEntity<>(created, HttpStatus.CREATED);
+            return new ResponseEntity<>(attachPermittedActions(created), HttpStatus.CREATED);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -86,7 +86,7 @@ public class ArticleSecController extends BaseControllerImpl<ArticleSec, Article
     public ResponseEntity<?> updateArticle(@PathVariable UUID id, @RequestBody ArticleSecDto articleDto) {
         try {
             ArticleSecDto updated = articleService.updateArticle(id, articleDto);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(attachPermittedActions(updated));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -97,7 +97,7 @@ public class ArticleSecController extends BaseControllerImpl<ArticleSec, Article
     public ResponseEntity<?> activerArticle(@PathVariable UUID id) {
         try {
             ArticleSecDto activated = articleService.activerArticle(id);
-            return ResponseEntity.ok(activated);
+            return ResponseEntity.ok(attachPermittedActions(activated));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -108,7 +108,7 @@ public class ArticleSecController extends BaseControllerImpl<ArticleSec, Article
     public ResponseEntity<?> desactiverArticle(@PathVariable UUID id) {
         try {
             ArticleSecDto deactivated = articleService.desactiverArticle(id);
-            return ResponseEntity.ok(deactivated);
+            return ResponseEntity.ok(attachPermittedActions(deactivated));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));

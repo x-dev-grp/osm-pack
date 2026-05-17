@@ -31,28 +31,28 @@ public class FournisseurController extends BaseControllerImpl<Fournisseur, Fourn
 
     @GetMapping
     public ResponseEntity<List<FournisseurDto>> getAllFournisseurs() {
-        return ResponseEntity.ok(fournisseurService.getAllFournisseurs());
+        return ResponseEntity.ok(attachPermittedActions(fournisseurService.getAllFournisseurs()));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<FournisseurDto> getFournisseurById(@PathVariable UUID id) {
-        return ResponseEntity.ok(fournisseurService.getFournisseurById(id));
+        return ResponseEntity.ok(attachPermittedActions(fournisseurService.getFournisseurById(id)));
     }
     @GetMapping("/actifs")
     public ResponseEntity<List<FournisseurDto>> getActiveFournisseurs() {
-        return ResponseEntity.ok(fournisseurService.getActiveFournisseurs());
+        return ResponseEntity.ok(attachPermittedActions(fournisseurService.getActiveFournisseurs()));
     }
 
     @PostMapping("/create")
     public ResponseEntity<FournisseurDto> createFournisseur(@RequestBody FournisseurDto fournisseurDto) {
-        return new ResponseEntity<>(fournisseurService.createFournisseur(fournisseurDto), HttpStatus.CREATED);
+        return new ResponseEntity<>(attachPermittedActions(fournisseurService.createFournisseur(fournisseurDto)), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateFournisseur(@PathVariable UUID id, @RequestBody FournisseurDto fournisseurDto) {
         try {
             FournisseurDto updated = fournisseurService.updateFournisseur(id, fournisseurDto);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(attachPermittedActions(updated));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -61,12 +61,12 @@ public class FournisseurController extends BaseControllerImpl<Fournisseur, Fourn
 
     @PutMapping("/{id}/activer")
     public ResponseEntity<FournisseurDto> activerFournisseur(@PathVariable UUID id) {
-        return ResponseEntity.ok(fournisseurService.activerFournisseur(id));
+        return ResponseEntity.ok(attachPermittedActions(fournisseurService.activerFournisseur(id)));
     }
 
     @PutMapping("/{id}/desactiver")
     public ResponseEntity<FournisseurDto> desactiverFournisseur(@PathVariable UUID id) {
-        return ResponseEntity.ok(fournisseurService.desactiverFournisseur(id));
+        return ResponseEntity.ok(attachPermittedActions(fournisseurService.desactiverFournisseur(id)));
     }
     @Override
     protected String getResourceName() {

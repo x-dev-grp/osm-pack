@@ -33,7 +33,7 @@ public class BomController extends BaseControllerImpl<BOM, BOMDto, BOMDto> {
     public ResponseEntity<?> getAllBoms() {
         try {
             List<BOMDto> boms = bomService.getAllBoms();
-            return ResponseEntity.ok(boms);
+            return ResponseEntity.ok(attachPermittedActions(boms));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -44,7 +44,7 @@ public class BomController extends BaseControllerImpl<BOM, BOMDto, BOMDto> {
     public ResponseEntity<?> getBomById(@PathVariable UUID id) {
         try {
             BOMDto bom = bomService.getBomById(id);
-            return ResponseEntity.ok(bom);
+            return ResponseEntity.ok(attachPermittedActions(bom));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", e.getMessage()));
@@ -55,7 +55,7 @@ public class BomController extends BaseControllerImpl<BOM, BOMDto, BOMDto> {
     public ResponseEntity<?> getBomsByProduct(@PathVariable UUID productId) {
         try {
             List<BOMDto> boms = bomService.getBomsByProduct(productId);
-            return ResponseEntity.ok(boms);
+            return ResponseEntity.ok(attachPermittedActions(boms));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -67,7 +67,7 @@ public class BomController extends BaseControllerImpl<BOM, BOMDto, BOMDto> {
                                        @RequestParam(required = false, defaultValue = "system") String username) {
         try {
             BOMDto created = bomService.createBom(bomDto);
-            return new ResponseEntity<>(created, HttpStatus.CREATED);
+            return new ResponseEntity<>(attachPermittedActions(created), HttpStatus.CREATED);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -78,7 +78,7 @@ public class BomController extends BaseControllerImpl<BOM, BOMDto, BOMDto> {
     public ResponseEntity<?> updateBom(@PathVariable UUID id, @RequestBody BOMDto bomDto) {
         try {
             BOMDto updated = bomService.updateBom(id, bomDto);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(attachPermittedActions(updated));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));

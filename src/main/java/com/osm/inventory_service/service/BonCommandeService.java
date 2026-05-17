@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -98,8 +97,7 @@ public class BonCommandeService extends BaseServiceImpl<BonCommande, BonCommande
     }
 
     private String genererNumeroBC() {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
-        return "BC-" + LocalDateTime.now().format(formatter) + "-" + UUID.randomUUID().toString().substring(0, 6);
+        return generateBusinessCode("numeroBC", "BO");
     }
     @Transactional(readOnly = true)
     public List<BonCommandeDto> getAllBonsCommande() {
