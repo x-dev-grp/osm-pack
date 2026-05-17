@@ -12,8 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -153,10 +151,7 @@ public class FournisseurService extends BaseServiceImpl<Fournisseur, Fournisseur
         return modelMapper.map(updatedFournisseur, FournisseurDto.class);
     }
     private String genererCodeFournisseur() {
-        String prefix = "FRN";
-        String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
-        String random = String.format("%04d", (int) (Math.random() * 10000));
-        return prefix + date + random;
+        return generateBusinessCode("code", "FO");
     }
     public List<FournisseurDto> getActiveFournisseurs() {
         return fournisseurRepository.findByActifTrue().stream()

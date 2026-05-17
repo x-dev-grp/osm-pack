@@ -34,7 +34,7 @@ public class LigneConditionnementController extends BaseControllerImpl<LigneCond
     public ResponseEntity<?> getLigneById(@PathVariable UUID id) {
         try {
             LigneConditionnementDto ligne = ligneService.getLigneById(id);
-            return ResponseEntity.ok(ligne);
+            return ResponseEntity.ok(attachPermittedActions(ligne));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", e.getMessage()));
@@ -45,7 +45,7 @@ public class LigneConditionnementController extends BaseControllerImpl<LigneCond
     public ResponseEntity<?> getAllLignes() {
         try {
             List<LigneConditionnementDto> lignes = ligneService.getAllLignes();
-            return ResponseEntity.ok(lignes);
+            return ResponseEntity.ok(attachPermittedActions(lignes));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -56,7 +56,7 @@ public class LigneConditionnementController extends BaseControllerImpl<LigneCond
     public ResponseEntity<?> createLigne(@RequestBody LigneConditionnementDto ligneDto) {
         try {
             LigneConditionnementDto created = ligneService.createLigne(ligneDto);
-            return new ResponseEntity<>(created, HttpStatus.CREATED);
+            return new ResponseEntity<>(attachPermittedActions(created), HttpStatus.CREATED);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -67,7 +67,7 @@ public class LigneConditionnementController extends BaseControllerImpl<LigneCond
     public ResponseEntity<?> updateLigne(@PathVariable UUID id, @RequestBody LigneConditionnementDto ligneDto) {
         try {
             LigneConditionnementDto updated = ligneService.updateLigne(id, ligneDto);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(attachPermittedActions(updated));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -101,7 +101,7 @@ public class LigneConditionnementController extends BaseControllerImpl<LigneCond
         try {
             Statue nouvelEtat = payload.get("etat");
             LigneConditionnementDto updated = ligneService.changerEtat(id, nouvelEtat);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(attachPermittedActions(updated));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -112,7 +112,7 @@ public class LigneConditionnementController extends BaseControllerImpl<LigneCond
     public ResponseEntity<?> getLignesActives() {
         try {
             List<LigneConditionnementDto> actives = ligneService.getLignesActives();
-            return ResponseEntity.ok(actives);
+            return ResponseEntity.ok(attachPermittedActions(actives));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));

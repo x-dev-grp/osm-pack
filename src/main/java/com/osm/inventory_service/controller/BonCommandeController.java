@@ -44,7 +44,7 @@ public class BonCommandeController extends BaseControllerImpl<BonCommande, BonCo
         try {
             List<BonCommandeDto> bonsCommande = bonCommandeService.getAllBonsCommande();
             logger.debug("Successfully fetched {} bons commande", bonsCommande.size());
-            return ResponseEntity.ok(new ApiResponse<>(true, "Bons commande retrieved successfully", bonsCommande));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Bons commande retrieved successfully", attachPermittedActions(bonsCommande)));
         } catch (Exception e) {
             logger.error("Error fetching all bons commande: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -58,7 +58,7 @@ public class BonCommandeController extends BaseControllerImpl<BonCommande, BonCo
         try {
             BonCommandeDto bonCommande = bonCommandeService.getBonCommandeById(id);
             logger.debug("Successfully fetched bon commande with id: {}", id);
-            return ResponseEntity.ok(new ApiResponse<>(true, "Bon commande retrieved successfully",  List.of(bonCommande)));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Bon commande retrieved successfully", List.of(attachPermittedActions(bonCommande))));
         } catch (Exception e) {
             logger.warn("Bon commande not found with id: {}", id);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -80,7 +80,7 @@ public class BonCommandeController extends BaseControllerImpl<BonCommande, BonCo
             logger.info("Successfully created bon commande with id: {}", created.getId());
 
             return new ResponseEntity<>(
-                    new ApiResponse<>(true, "Bon commande created successfully",  List.of(created)),
+                    new ApiResponse<>(true, "Bon commande created successfully", List.of(attachPermittedActions(created))),
                     HttpStatus.CREATED
             );
 
@@ -156,7 +156,7 @@ public class BonCommandeController extends BaseControllerImpl<BonCommande, BonCo
             @RequestBody List<LigneBonCommandeDto> lignesRecues) {
         try {
             BonCommandeDto bc = bonCommandeService.receptionnerCommande(id, lignesRecues);
-            return ResponseEntity.ok(new ApiResponse<>(true, "Réception enregistrée avec succès", List.of(bc)));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Réception enregistrée avec succès", List.of(attachPermittedActions(bc))));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest()
                     .body(new ApiResponse<>(false, e.getMessage(), null));

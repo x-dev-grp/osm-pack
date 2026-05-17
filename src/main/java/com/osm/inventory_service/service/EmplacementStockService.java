@@ -177,11 +177,7 @@ public class EmplacementStockService extends BaseServiceImpl<EmplacementStock, E
         emplacementRepository.delete(emplacement);
     }
     private String generateUniqueCode() {
-        String code;
-        do {
-            code = "EMP-" + System.currentTimeMillis();
-        } while (emplacementRepository.existsByCode(code));
-        return code;
+        return generateBusinessCode("code", "EM");
     }
 
 

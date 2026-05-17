@@ -44,7 +44,7 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
         try {
             List<EmplacementStockDto> emplacements = emplacementService.getAllEmplacements();
             log.debug("Successfully fetched {} emplacements", emplacements.size());
-            return ResponseEntity.ok(new ApiResponse<>(true, "Emplacements retrieved successfully", emplacements));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Emplacements retrieved successfully", attachPermittedActions(emplacements)));
         } catch (Exception e) {
             log.error("Error fetching all emplacements: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -62,7 +62,7 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
         try {
             EmplacementStockDto emplacement = emplacementService.getEmplacementById(id);
             log.debug("Successfully fetched emplacement with id: {}", id);
-            return ResponseEntity.ok(new ApiResponse<>(true, "Emplacement retrieved successfully", Collections.singletonList(emplacement)));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Emplacement retrieved successfully", Collections.singletonList(attachPermittedActions(emplacement))));
         } catch ( NotFoundException e) {
             log.warn("Emplacement not found with id: {}", id);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -83,7 +83,7 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
         try {
             EmplacementStockDto dto = emplacementService.activerEmplacement(id);
             log.info("Emplacement activé avec id: {}", id);
-            return ResponseEntity.ok(new ApiResponse<>(true, "Emplacement activé avec succès", Arrays.asList(dto)));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Emplacement activé avec succès", Arrays.asList(attachPermittedActions(dto))));
         } catch (NotFoundException e) {
             log.warn("Emplacement non trouvé pour activation: {}", id);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -105,7 +105,7 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
         try {
             EmplacementStockDto dto = emplacementService.desactiverEmplacement(id);
             log.info("Emplacement désactivé avec id: {}", id);
-            return ResponseEntity.ok(new ApiResponse<>(true, "Emplacement désactivé avec succès", Arrays.asList(dto)));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Emplacement désactivé avec succès", Arrays.asList(attachPermittedActions(dto))));
         } catch (NotFoundException e) {
             log.warn("Emplacement non trouvé pour désactivation: {}", id);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -130,7 +130,7 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
             }
             List<EmplacementStockDto> emplacements = emplacementService.getEmplacementsReservesPour(client);
             log.debug("Successfully fetched {} reserved emplacements for client: {}", emplacements.size(), client);
-            return ResponseEntity.ok(new ApiResponse<>(true, "Reserved emplacements retrieved successfully", emplacements));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Reserved emplacements retrieved successfully", attachPermittedActions(emplacements)));
         } catch (BadRequestException e) {
             log.warn("Bad request for client: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -152,7 +152,7 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
         try {
              EmplacementStockDto created = emplacementService.createEmplacement(emplacementDto);
             log.info("Successfully created emplacement with id: {}", created.getId());
-            return new ResponseEntity<>(new ApiResponse<>(true, "Emplacement created successfully", Arrays.asList(created)),
+            return new ResponseEntity<>(new ApiResponse<>(true, "Emplacement created successfully", Arrays.asList(attachPermittedActions(created))),
                     HttpStatus.CREATED);
         } catch (ValidationException | BadRequestException e) {
             log.warn("Validation error creating emplacement: {}", e.getMessage());
@@ -185,7 +185,7 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
         try {
              EmplacementStockDto updated = emplacementService.updateEmplacement(id, emplacementDto);
             log.info("Successfully updated emplacement with id: {}", id);
-            return ResponseEntity.ok(new ApiResponse<>(true, "Emplacement updated successfully", Arrays.asList(updated)));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Emplacement updated successfully", Arrays.asList(attachPermittedActions(updated))));
         } catch (NotFoundException e) {
             log.warn("Emplacement not found for update with id: {}", id);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -221,7 +221,7 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
             }
             EmplacementStockDto reserved = emplacementService.reserverEmplacement(id, reservePour);
             log.info("Successfully reserved emplacement with id: {} for: {}", id, reservePour);
-            return ResponseEntity.ok(new ApiResponse<>(true, "Emplacement reserved successfully", Arrays.asList(reserved)));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Emplacement reserved successfully", Arrays.asList(attachPermittedActions(reserved))));
         } catch (NotFoundException e) {
             log.warn("Emplacement not found for reservation with id: {}", id);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -247,7 +247,7 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
         try {
             EmplacementStockDto liberated = emplacementService.libererEmplacement(id);
             log.info("Successfully liberated emplacement with id: {}", id);
-            return ResponseEntity.ok(new ApiResponse<>(true, "Emplacement liberated successfully", Arrays.asList(liberated)));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Emplacement liberated successfully", Arrays.asList(attachPermittedActions(liberated))));
         } catch (NotFoundException e) {
             log.warn("Emplacement not found for liberation with id: {}", id);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -285,7 +285,7 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
             }
             EmplacementStockDto updated = emplacementService.mettreAJourCapacite(id, nouvelleCapacite);
             log.info("Successfully updated capacity for emplacement with id: {}", id);
-            return ResponseEntity.ok(new ApiResponse<>(true, "Capacity updated successfully", Arrays.asList(updated)));
+            return ResponseEntity.ok(new ApiResponse<>(true, "Capacity updated successfully", Arrays.asList(attachPermittedActions(updated))));
         } catch (NotFoundException e) {
             log.warn("Emplacement not found for capacity update with id: {}", id);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

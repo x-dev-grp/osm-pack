@@ -34,7 +34,7 @@ public class ProductController extends BaseControllerImpl<Product, ProductDto, P
     public ResponseEntity<?> getAllProducts() {
         try {
             List<ProductDto> products = productService.getAllProducts();
-            return ResponseEntity.ok(products);
+            return ResponseEntity.ok(attachPermittedActions(products));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -45,7 +45,7 @@ public class ProductController extends BaseControllerImpl<Product, ProductDto, P
     public ResponseEntity<?> getProductById(@PathVariable UUID id) {
         try {
             ProductDto product = productService.getProductById(id);
-            return ResponseEntity.ok(product);
+            return ResponseEntity.ok(attachPermittedActions(product));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", e.getMessage()));
@@ -56,7 +56,7 @@ public class ProductController extends BaseControllerImpl<Product, ProductDto, P
     public ResponseEntity<?> createProduct(@RequestBody ProductDto productDto) {
         try {
             ProductDto created = productService.createProduct(productDto);
-            return new ResponseEntity<>(created, HttpStatus.CREATED);
+            return new ResponseEntity<>(attachPermittedActions(created), HttpStatus.CREATED);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -67,7 +67,7 @@ public class ProductController extends BaseControllerImpl<Product, ProductDto, P
     public ResponseEntity<?> updateProduct(@PathVariable UUID id, @RequestBody ProductDto productDto) {
         try {
             ProductDto updated = productService.updateProduct(id, productDto);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(attachPermittedActions(updated));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -78,7 +78,7 @@ public class ProductController extends BaseControllerImpl<Product, ProductDto, P
     public ResponseEntity<?> getActiveProducts() {
         try {
             List<ProductDto> actifs = productService.getAllActiveProducts();
-            return ResponseEntity.ok(actifs);
+            return ResponseEntity.ok(attachPermittedActions(actifs));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -88,7 +88,7 @@ public class ProductController extends BaseControllerImpl<Product, ProductDto, P
     @GetMapping("/type/{type}")
     public ResponseEntity<?> getProductsByType(@PathVariable ProductType type) {
         try {
-            return ResponseEntity.ok(productService.getProductsByType(type));
+            return ResponseEntity.ok(attachPermittedActions(productService.getProductsByType(type)));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
