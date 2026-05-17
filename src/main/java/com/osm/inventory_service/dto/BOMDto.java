@@ -1,7 +1,7 @@
 package com.osm.inventory_service.dto;
 
 import com.osm.inventory_service.entity.BOM;
-import com.osm.inventory_service.entity.Product;
+import com.osm.inventory_service.entity.ProduitFinal;
 import com.xdev.xdevbase.dtos.BaseDto;
 import lombok.Data;
 import lombok.Getter;
@@ -19,7 +19,7 @@ public class BOMDto  extends BaseDto<BOM> implements Serializable {
     private List<BomLineDto> lines;
     private UUID productId;
     private String productName;
-    private Product product;
+    private ProduitFinal produitFinal;
     private String version;
 
     public UUID getSkuId() {

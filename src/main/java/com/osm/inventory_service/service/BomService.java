@@ -5,10 +5,10 @@ import com.osm.inventory_service.dto.BomLineDto;
 import com.osm.inventory_service.entity.ArticleSec;
 import com.osm.inventory_service.entity.BOM;
 import com.osm.inventory_service.entity.BomLine;
-import com.osm.inventory_service.entity.Product;
+import com.osm.inventory_service.entity.ProduitFinal;
 import com.osm.inventory_service.repository.ArticleSecRepository;
 import com.osm.inventory_service.repository.BomRepository;
-import com.osm.inventory_service.repository.ProductRepository;
+import com.osm.inventory_service.repository.ProduitFinalRepository;
 import com.xdev.xdevbase.qr.CodeGenerator;
 import com.xdev.xdevbase.repos.BaseRepository;
 import com.xdev.xdevbase.services.impl.BaseServiceImpl;
@@ -25,15 +25,19 @@ import java.util.stream.Collectors;
 public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
 
     private final BomRepository bomRepository;
-    private final ProductRepository productRepository;
+    private final ProduitFinalRepository produitFinalRepository;
     private final ArticleSecRepository articleRepository;
 
     @Autowired
-    public BomService(BaseRepository<BOM> repository, BomRepository bomRepository, ProductRepository productRepository,
-                      CodeGenerator codeGenerator, ArticleSecRepository articleRepository, ModelMapper modelMapper) {
+    public BomService(BaseRepository<BOM> repository,
+                      BomRepository bomRepository,
+                      ProduitFinalRepository produitFinalRepository,
+                      CodeGenerator codeGenerator,
+                      ArticleSecRepository articleRepository,
+                      ModelMapper modelMapper) {
         super(repository, codeGenerator, modelMapper);
         this.bomRepository = bomRepository;
-        this.productRepository = productRepository;
+        this.produitFinalRepository = produitFinalRepository;
         this.articleRepository = articleRepository;
     }
 
@@ -50,18 +54,18 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
 
     @Transactional(readOnly = true)
     public List<BOMDto> getBomsByProduct(UUID productId) {
-        return bomRepository.findByProductId(productId).stream().map(this::convertToDto).collect(Collectors.toList());
+        return bomRepository.findByProduitFinalId(productId).stream().map(this::convertToDto).collect(Collectors.toList());
     }
 
     @Transactional
     public BOMDto createBom(BOMDto bomDto) {
-        Product product = productRepository.findById(bomDto.getProductId())
+        ProduitFinal produitFinal = produitFinalRepository.findById(bomDto.getProductId())
                 .orElseThrow(() -> new RuntimeException("Produit non trouve avec l'id : " + bomDto.getProductId()));
-        int count = bomRepository.findByProductId(bomDto.getProductId()).size();
+        int count = bomRepository.findByProduitFinalId(bomDto.getProductId()).size();
         String version = "V" + (count + 1);
 
         BOM bom = new BOM();
-        bom.setProduct(product);
+        bom.setProduitFinal(produitFinal);
         bom.setVersion(version);
 
         List<BomLine> lines = bomDto.getLines().stream().map(lineDto -> {
@@ -83,10 +87,10 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
     @Transactional
     public BOMDto updateBom(UUID id, BOMDto bomDto) {
         BOM bom = bomRepository.findById(id).orElseThrow(() -> new RuntimeException("BOM non trouvee avec l'id : " + id));
-        if (!bom.getProduct().getId().equals(bomDto.getProductId())) {
-            Product newProduct = productRepository.findById(bomDto.getProductId())
+        if (!bom.getProduitFinal().getId().equals(bomDto.getProductId())) {
+            ProduitFinal newProduitFinal = produitFinalRepository.findById(bomDto.getProductId())
                     .orElseThrow(() -> new RuntimeException("Produit non trouve avec l'id : " + bomDto.getProductId()));
-            bom.setProduct(newProduct);
+            bom.setProduitFinal(newProduitFinal);
         }
         bom.setVersion(bomDto.getVersion());
         bom.getLines().clear();
@@ -122,11 +126,11 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
     private BOMDto convertToDto(BOM bom) {
         BOMDto dto = new BOMDto();
         dto.setId(bom.getId());
-        if (bom.getProduct() != null) {
-            dto.setProductId(bom.getProduct().getId());
-            dto.setProductName(bom.getProduct().getName());
+        if (bom.getProduitFinal() != null) {
+            dto.setProductId(bom.getProduitFinal().getId());
+            dto.setProductName(bom.getProduitFinal().getName());
         } else {
-            dto.setProductName("Produit non assigné");
+            dto.setProductName("Produit non assigne");
         }
         dto.setVersion(bom.getVersion());
 

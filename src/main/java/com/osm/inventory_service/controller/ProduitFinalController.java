@@ -1,9 +1,9 @@
 package com.osm.inventory_service.controller;
 
-import com.osm.inventory_service.dto.ProductDto;
-import com.osm.inventory_service.entity.Product;
+import com.osm.inventory_service.dto.ProduitFinalDto;
+import com.osm.inventory_service.entity.ProduitFinal;
 import com.osm.inventory_service.entity.ProductType;
-import com.osm.inventory_service.service.ProductService;
+import com.osm.inventory_service.service.ProduitFinalService;
 import com.xdev.xdevbase.controllers.impl.BaseControllerImpl;
 import com.xdev.xdevbase.services.BaseService;
 import org.modelmapper.ModelMapper;
@@ -17,24 +17,24 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping({"/api/inventaire/products", "/api/inventaire/skus"})
-public class ProductController extends BaseControllerImpl<Product, ProductDto, ProductDto> {
+@RequestMapping({"/api/inventaire/produits-finis", "/api/inventaire/products", "/api/inventaire/skus"})
+public class ProduitFinalController extends BaseControllerImpl<ProduitFinal, ProduitFinalDto, ProduitFinalDto> {
 
-    private final ProductService productService;
+    private final ProduitFinalService produitFinalService;
 
     @Autowired
-    public ProductController(BaseService<Product, ProductDto, ProductDto> baseService,
-                             ModelMapper modelMapper,
-                             ProductService productService) {
+    public ProduitFinalController(BaseService<ProduitFinal, ProduitFinalDto, ProduitFinalDto> baseService,
+                                  ModelMapper modelMapper,
+                                  ProduitFinalService produitFinalService) {
         super(baseService, modelMapper);
-        this.productService = productService;
+        this.produitFinalService = produitFinalService;
     }
 
     @GetMapping
-    public ResponseEntity<?> getAllProducts() {
+    public ResponseEntity<?> getAllProduitsFinaux() {
         try {
-            List<ProductDto> products = productService.getAllProducts();
-            return ResponseEntity.ok(attachPermittedActions(products));
+            List<ProduitFinalDto> produitsFinaux = produitFinalService.getAllProduitsFinaux();
+            return ResponseEntity.ok(attachPermittedActions(produitsFinaux));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -42,10 +42,10 @@ public class ProductController extends BaseControllerImpl<Product, ProductDto, P
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getProductById(@PathVariable UUID id) {
+    public ResponseEntity<?> getProduitFinalById(@PathVariable UUID id) {
         try {
-            ProductDto product = productService.getProductById(id);
-            return ResponseEntity.ok(attachPermittedActions(product));
+            ProduitFinalDto produitFinal = produitFinalService.getProduitFinalById(id);
+            return ResponseEntity.ok(attachPermittedActions(produitFinal));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", e.getMessage()));
@@ -53,9 +53,9 @@ public class ProductController extends BaseControllerImpl<Product, ProductDto, P
     }
 
     @PostMapping("/create")
-    public ResponseEntity<?> createProduct(@RequestBody ProductDto productDto) {
+    public ResponseEntity<?> createProduitFinal(@RequestBody ProduitFinalDto produitFinalDto) {
         try {
-            ProductDto created = productService.createProduct(productDto);
+            ProduitFinalDto created = produitFinalService.createProduitFinal(produitFinalDto);
             return new ResponseEntity<>(attachPermittedActions(created), HttpStatus.CREATED);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -64,9 +64,9 @@ public class ProductController extends BaseControllerImpl<Product, ProductDto, P
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateProduct(@PathVariable UUID id, @RequestBody ProductDto productDto) {
+    public ResponseEntity<?> updateProduitFinal(@PathVariable UUID id, @RequestBody ProduitFinalDto produitFinalDto) {
         try {
-            ProductDto updated = productService.updateProduct(id, productDto);
+            ProduitFinalDto updated = produitFinalService.updateProduitFinal(id, produitFinalDto);
             return ResponseEntity.ok(attachPermittedActions(updated));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -75,9 +75,9 @@ public class ProductController extends BaseControllerImpl<Product, ProductDto, P
     }
 
     @GetMapping("/actifs")
-    public ResponseEntity<?> getActiveProducts() {
+    public ResponseEntity<?> getActiveProduitsFinaux() {
         try {
-            List<ProductDto> actifs = productService.getAllActiveProducts();
+            List<ProduitFinalDto> actifs = produitFinalService.getAllActiveProduitsFinaux();
             return ResponseEntity.ok(attachPermittedActions(actifs));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -86,9 +86,9 @@ public class ProductController extends BaseControllerImpl<Product, ProductDto, P
     }
 
     @GetMapping("/type/{type}")
-    public ResponseEntity<?> getProductsByType(@PathVariable ProductType type) {
+    public ResponseEntity<?> getProduitsFinauxByType(@PathVariable ProductType type) {
         try {
-            return ResponseEntity.ok(attachPermittedActions(productService.getProductsByType(type)));
+            return ResponseEntity.ok(attachPermittedActions(produitFinalService.getProduitsFinauxByType(type)));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
@@ -96,9 +96,9 @@ public class ProductController extends BaseControllerImpl<Product, ProductDto, P
     }
 
     @PutMapping("/{id}/desactiver")
-    public ResponseEntity<?> desactiverProduct(@PathVariable UUID id) {
+    public ResponseEntity<?> desactiverProduitFinal(@PathVariable UUID id) {
         try {
-            productService.desactiverProduct(id);
+            produitFinalService.desactiverProduitFinal(id);
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -107,9 +107,20 @@ public class ProductController extends BaseControllerImpl<Product, ProductDto, P
     }
 
     @PutMapping("/{id}/activer")
-    public ResponseEntity<?> activerProduct(@PathVariable UUID id) {
+    public ResponseEntity<?> activerProduitFinal(@PathVariable UUID id) {
         try {
-            productService.activerProduct(id);
+            produitFinalService.activerProduitFinal(id);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> supprimerProduitFinal(@PathVariable UUID id) {
+        try {
+            produitFinalService.supprimerProduitFinal(id);
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -119,7 +130,7 @@ public class ProductController extends BaseControllerImpl<Product, ProductDto, P
 
     @Override
     protected String getResourceName() {
-        return "Product";
+        return "PRODUITFINAL";
     }
 
     @Override

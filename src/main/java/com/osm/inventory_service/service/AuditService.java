@@ -37,7 +37,7 @@ public class AuditService {
                 LigneBonCommande.class,
                 LigneConditionnement.class,
                 MouvementStockSec.class,
-                Product.class,
+                ProduitFinal.class,
                 StockSec.class
         );
 
