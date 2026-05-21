@@ -2,7 +2,7 @@ package com.osm.inventory_service.controller;
 
 import com.osm.inventory_service.dto.ProduitFinalDto;
 import com.osm.inventory_service.entity.ProduitFinal;
-import com.osm.inventory_service.entity.ProductType;
+import com.osm.inventory_service.Enum.ProduitFinalType;
 import com.osm.inventory_service.service.ProduitFinalService;
 import com.xdev.xdevbase.controllers.impl.BaseControllerImpl;
 import com.xdev.xdevbase.services.BaseService;
@@ -86,7 +86,7 @@ public class ProduitFinalController extends BaseControllerImpl<ProduitFinal, Pro
     }
 
     @GetMapping("/type/{type}")
-    public ResponseEntity<?> getProduitsFinauxByType(@PathVariable ProductType type) {
+    public ResponseEntity<?> getProduitsFinauxByType(@PathVariable ProduitFinalType type) {
         try {
             return ResponseEntity.ok(attachPermittedActions(produitFinalService.getProduitsFinauxByType(type)));
         } catch (RuntimeException e) {

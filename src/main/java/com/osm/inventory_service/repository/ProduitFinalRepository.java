@@ -3,20 +3,21 @@ package com.osm.inventory_service.repository;
 
 
 import com.osm.inventory_service.entity.ProduitFinal;
-import com.osm.inventory_service.entity.ProductType;
+import com.osm.inventory_service.Enum.ProduitFinalType;
 import com.xdev.xdevbase.repos.BaseRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface ProduitFinalRepository extends BaseRepository<ProduitFinal> {
-    Optional<ProduitFinal> findByIdAndDeletedFalse(java.util.UUID id);
-    Optional<ProduitFinal> findByNameAndDeletedFalse(String name);
-    Optional<ProduitFinal> findByCodeAndDeletedFalse(String code);
-    List<ProduitFinal> findByDeletedFalse();
-    List<ProduitFinal> findByActifTrueAndDeletedFalse();
-    List<ProduitFinal> findByTypeAndDeletedFalse(ProductType type);
+    Optional<ProduitFinal> findByIdAndIsDeletedFalse(UUID id);
+    Optional<ProduitFinal> findByNameAndIsDeletedFalse(String name);
+    Optional<ProduitFinal> findByCodeAndIsDeletedFalse(String code);
+    List<ProduitFinal> findByIsDeletedFalse();
+    List<ProduitFinal> findByActifTrueAndIsDeletedFalse();
+    List<ProduitFinal> findByTypeAndIsDeletedFalse(ProduitFinalType type);
 
 }

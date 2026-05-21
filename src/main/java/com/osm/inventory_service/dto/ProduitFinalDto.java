@@ -3,7 +3,7 @@ package com.osm.inventory_service.dto;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.osm.inventory_service.entity.ProduitFinal;
-import com.osm.inventory_service.entity.ProductType;
+import com.osm.inventory_service.Enum.ProduitFinalType;
 import com.xdev.xdevbase.dtos.BaseDto;
 import lombok.Data;
 import lombok.Getter;
@@ -28,7 +28,7 @@ public class ProduitFinalDto extends BaseDto<ProduitFinal> implements Serializab
     String name;
     @JsonAlias("skuCode")
     String code;
-    ProductType type = ProductType.NON_VRAC;
+    ProduitFinalType type = ProduitFinalType.NON_VRAC;
     String category;
     String unitOfMeasure;
     String description;

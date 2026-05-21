@@ -1,6 +1,7 @@
 package com.osm.inventory_service.entity;
 
 
+import com.osm.inventory_service.Enum.ProduitFinalType;
 import com.xdev.xdevbase.entities.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -24,7 +25,7 @@ public class ProduitFinal extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ProductType type = ProductType.NON_VRAC;
+    private ProduitFinalType type = ProduitFinalType.NON_VRAC;
 
     private String category;
 
