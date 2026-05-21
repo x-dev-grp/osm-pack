@@ -2,7 +2,7 @@ package com.osm.inventory_service.service;
 
 import com.osm.inventory_service.dto.ProduitFinalDto;
 import com.osm.inventory_service.entity.ProduitFinal;
-import com.osm.inventory_service.entity.ProductType;
+import com.osm.inventory_service.Enum.ProduitFinalType;
 import com.osm.inventory_service.repository.ProduitFinalRepository;
 import com.xdev.xdevbase.repos.BaseRepository;
 import com.xdev.xdevbase.services.impl.BaseServiceImpl;
@@ -34,25 +34,25 @@ public class ProduitFinalService extends BaseServiceImpl<ProduitFinal, ProduitFi
     }
 
     public List<ProduitFinalDto> getAllProduitsFinaux() {
-        return produitFinalRepository.findByDeletedFalse().stream()
+        return produitFinalRepository.findByIsDeletedFalse().stream()
                 .map(produitFinal -> modelMapper.map(produitFinal, ProduitFinalDto.class))
                 .collect(Collectors.toList());
     }
 
     public ProduitFinalDto getProduitFinalById(UUID id) {
-        ProduitFinal produitFinal = produitFinalRepository.findByIdAndDeletedFalse(id)
+        ProduitFinal produitFinal = produitFinalRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Produit non trouve avec id: " + id));
         return modelMapper.map(produitFinal, ProduitFinalDto.class);
     }
 
     public List<ProduitFinalDto> getAllActiveProduitsFinaux() {
-        return produitFinalRepository.findByActifTrueAndDeletedFalse().stream()
+        return produitFinalRepository.findByActifTrueAndIsDeletedFalse().stream()
                 .map(produitFinal -> modelMapper.map(produitFinal, ProduitFinalDto.class))
                 .collect(Collectors.toList());
     }
 
-    public List<ProduitFinalDto> getProduitsFinauxByType(ProductType type) {
-        return produitFinalRepository.findByTypeAndDeletedFalse(type).stream()
+    public List<ProduitFinalDto> getProduitsFinauxByType(ProduitFinalType type) {
+        return produitFinalRepository.findByTypeAndIsDeletedFalse(type).stream()
                 .map(produitFinal -> modelMapper.map(produitFinal, ProduitFinalDto.class))
                 .collect(Collectors.toList());
     }
@@ -73,7 +73,7 @@ public class ProduitFinalService extends BaseServiceImpl<ProduitFinal, ProduitFi
 
     @Transactional
     public ProduitFinalDto updateProduitFinal(UUID id, ProduitFinalDto produitFinalDto) {
-        ProduitFinal existingProduitFinal = produitFinalRepository.findByIdAndDeletedFalse(id)
+        ProduitFinal existingProduitFinal = produitFinalRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Produit non trouve avec id: " + id));
         String name = resolveName(produitFinalDto);
         String code = existingProduitFinal.getCode();
@@ -87,7 +87,7 @@ public class ProduitFinalService extends BaseServiceImpl<ProduitFinal, ProduitFi
 
     @Transactional
     public void desactiverProduitFinal(UUID id) {
-        ProduitFinal produitFinal = produitFinalRepository.findByIdAndDeletedFalse(id)
+        ProduitFinal produitFinal = produitFinalRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Produit non trouve avec id: " + id));
         produitFinal.setActif(false);
         produitFinalRepository.save(produitFinal);
@@ -95,7 +95,7 @@ public class ProduitFinalService extends BaseServiceImpl<ProduitFinal, ProduitFi
 
     @Transactional
     public void activerProduitFinal(UUID id) {
-        ProduitFinal produitFinal = produitFinalRepository.findByIdAndDeletedFalse(id)
+        ProduitFinal produitFinal = produitFinalRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Produit non trouve avec id: " + id));
         produitFinal.setActif(true);
         produitFinalRepository.save(produitFinal);
@@ -103,7 +103,7 @@ public class ProduitFinalService extends BaseServiceImpl<ProduitFinal, ProduitFi
 
     @Transactional
     public void supprimerProduitFinal(UUID id) {
-        ProduitFinal produitFinal = produitFinalRepository.findByIdAndDeletedFalse(id)
+        ProduitFinal produitFinal = produitFinalRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Produit non trouve avec id: " + id));
         produitFinal.setDeleted(true);
         produitFinal.setActif(false);
@@ -111,7 +111,7 @@ public class ProduitFinalService extends BaseServiceImpl<ProduitFinal, ProduitFi
     }
 
     private void applyProduitFinalDto(ProduitFinal produitFinal, ProduitFinalDto produitFinalDto, String name, String code) {
-        ProductType type = produitFinalDto.getType() == null ? ProductType.NON_VRAC : produitFinalDto.getType();
+        ProduitFinalType type = produitFinalDto.getType() == null ? ProduitFinalType.NON_VRAC : produitFinalDto.getType();
 
         produitFinal.setName(name);
         produitFinal.setCode(code);
@@ -128,7 +128,7 @@ public class ProduitFinalService extends BaseServiceImpl<ProduitFinal, ProduitFi
             produitFinal.setActif(Boolean.TRUE);
         }
 
-        if (type == ProductType.VRAC) {
+        if (type == ProduitFinalType.VRAC) {
             produitFinal.setVolume(null);
             produitFinal.setPackagingType(null);
             produitFinal.setBarcode(null);
@@ -164,12 +164,12 @@ public class ProduitFinalService extends BaseServiceImpl<ProduitFinal, ProduitFi
         return name;
     }
 
-    private String resolveUnitOfMeasure(ProduitFinalDto produitFinalDto, ProductType type) {
+    private String resolveUnitOfMeasure(ProduitFinalDto produitFinalDto, ProduitFinalType type) {
         String unitOfMeasure = trimToNull(produitFinalDto.getUnitOfMeasure());
         if (unitOfMeasure != null) {
             return unitOfMeasure;
         }
-        return type == ProductType.VRAC ? "L" : "BOTTLE";
+        return type == ProduitFinalType.VRAC ? "L" : "BOTTLE";
     }
 
     private String resolveHarvestCampaign(ProduitFinalDto produitFinalDto, String currentValue) {
@@ -184,7 +184,7 @@ public class ProduitFinalService extends BaseServiceImpl<ProduitFinal, ProduitFi
     }
 
     private void ensureNameIsAvailable(String name, UUID currentId) {
-        produitFinalRepository.findByNameAndDeletedFalse(name)
+        produitFinalRepository.findByNameAndIsDeletedFalse(name)
                 .filter(produitFinal -> currentId == null || !Objects.equals(produitFinal.getId(), currentId))
                 .ifPresent(produitFinal -> {
                     throw new RuntimeException("Un produit avec ce nom existe deja: " + name);
@@ -192,7 +192,7 @@ public class ProduitFinalService extends BaseServiceImpl<ProduitFinal, ProduitFi
     }
 
     private void ensureCodeIsAvailable(String code, UUID currentId) {
-        produitFinalRepository.findByCodeAndDeletedFalse(code)
+        produitFinalRepository.findByNameAndIsDeletedFalse(code)
                 .filter(produitFinal -> currentId == null || !Objects.equals(produitFinal.getId(), currentId))
                 .ifPresent(produitFinal -> {
                     throw new RuntimeException("Un produit avec ce code existe deja: " + code);
