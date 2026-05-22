@@ -1,11 +1,17 @@
-/*package com.osm.inventory_service.service;
+package com.osm.inventory_service.service;
 
+import com.osm.inventory_service.Enum.StatutBonCommande;
 import com.osm.inventory_service.dto.StatistiquesDTO;
-import com.osm.inventory_service.entity.*;
-import com.osm.inventory_service.Enum.*;
-import com.osm.inventory_service.repository.*;
+import com.osm.inventory_service.entity.ArticleSec;
+import com.osm.inventory_service.entity.MouvementStockSec;
+import com.osm.inventory_service.entity.StockSec;
+import com.osm.inventory_service.repository.ArticleSecRepository;
+import com.osm.inventory_service.repository.BonCommandeRepository;
+import com.osm.inventory_service.repository.MouvementStockSecRepository;
+import com.osm.inventory_service.repository.StockSecRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -13,6 +19,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Transactional(readOnly = true)
 @Service
 public class StatistiqueService {
 
@@ -70,17 +77,16 @@ public class StatistiqueService {
             List<ArticleSec> articles = articleRepository.findByActifTrue();
 
             for (ArticleSec a : articles) {
-                StockSec stock = stockRepository.findByArticle(a).orElse(null);
+                StockSec stock = stockRepository.findByArticleId(a.getId()).orElse(null);
                 if (stock != null && a.getStockMinimum() != null &&
                         stock.getQuantiteActuelle() <= a.getStockMinimum()) {
 
                     Map<String, Object> articleMap = new HashMap<>();
                     articleMap.put("id", a.getId());
-                    articleMap.put("sku", a.getSku());
+                    articleMap.put("sku", a.getId());
                     articleMap.put("nom", a.getNom());
                     articleMap.put("stockActuel", stock.getQuantiteActuelle());
                     articleMap.put("stockMinimum", a.getStockMinimum());
-                    articleMap.put("uniteMesure", a.getUniteMesure());
                     articleMap.put("categorie", a.getCategorie());
 
                     // ratio critique (0..1) pour trier
@@ -141,9 +147,8 @@ public class StatistiqueService {
 
                 if (article != null) {
                     articleMap.put("id", article.getId());
-                    articleMap.put("sku", article.getSku());
+                    articleMap.put("sku", article.getSkuId());
                     articleMap.put("nom", article.getNom());
-                    articleMap.put("uniteMesure", article.getUniteMesure());
                     articleMap.put("categorie", article.getCategorie());
                 }
 
@@ -165,7 +170,7 @@ public class StatistiqueService {
             long articlesEnRupture = 0;
             List<ArticleSec> articles = articleRepository.findByActifTrue();
             for (ArticleSec a : articles) {
-                StockSec stock = stockRepository.findByArticle(a).orElse(null);
+                StockSec stock = stockRepository.findByArticleId(a.getId()).orElse(null);
                 if (stock != null && stock.getQuantiteActuelle() != null && stock.getQuantiteActuelle() <= 0) {
                     articlesEnRupture++;
                 }
@@ -198,7 +203,7 @@ public class StatistiqueService {
             List<ArticleSec> articles = articleRepository.findByActifTrue();
             long count = 0;
             for (ArticleSec a : articles) {
-                StockSec stock = stockRepository.findByArticle(a).orElse(null);
+                StockSec stock = stockRepository.findByArticleId(a.getId()).orElse(null);
                 if (stock != null && a.getStockMinimum() != null &&
                         stock.getQuantiteActuelle() <= a.getStockMinimum()) {
                     count++;
@@ -212,7 +217,7 @@ public class StatistiqueService {
 
     private Long compterBonsEnAttenteSimple() {
         try {
-            return bonCommandeRepository.countByStatut(StatutBonCommande.EN_ATTENTE);
+            return bonCommandeRepository.countBonCommandesByStatus(StatutBonCommande.EN_ATTENTE);
         } catch (Exception e) {
             return 0L;
         }
@@ -223,7 +228,7 @@ public class StatistiqueService {
             List<ArticleSec> articles = articleRepository.findByActifTrue();
             double total = 0;
             for (ArticleSec a : articles) {
-                StockSec stock = stockRepository.findByArticle(a).orElse(null);
+                StockSec stock = stockRepository.findByArticleId(a.getId()).orElse(null);
                 if (stock != null && stock.getQuantiteActuelle() != null) {
                     total += stock.getQuantiteActuelle() * 1.0; // somme de quantités
                 }
@@ -250,7 +255,7 @@ public class StatistiqueService {
         LocalDateTime start = debut.atDay(1).atStartOfDay();
         LocalDateTime end = fin.atEndOfMonth().atTime(23, 59, 59);
 
-        List<MouvementStockSec> mouvements = mouvementRepository.findByDateMouvementBetween(start, end);
+        List<MouvementStockSec> mouvements = mouvementRepository.getMouvementStockSecsByDateMouvementBetween(start, end);
 
         Map<YearMonth, Long> grouped = mouvements.stream()
                 .filter(m -> m.getDateMouvement() != null)
@@ -272,7 +277,7 @@ public class StatistiqueService {
         try {
             List<ArticleSec> articles = articleRepository.findByActifTrue();
             for (ArticleSec a : articles) {
-                StockSec stock = stockRepository.findByArticle(a).orElse(null);
+                StockSec stock = stockRepository.findByArticleId(a.getId()).orElse(null);
                 if (stock != null && a.getStockMinimum() != null &&
                         stock.getQuantiteActuelle() <= a.getStockMinimum()) {
                     String cat = String.valueOf(a.getCategorie());
@@ -284,4 +289,4 @@ public class StatistiqueService {
         }
         return map;
     }
-}*/
+}

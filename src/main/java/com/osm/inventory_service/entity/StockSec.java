@@ -38,5 +38,7 @@ public class StockSec extends BaseEntity {
     @Column(name = "quantite_reservee", nullable = false)
     private Integer quantiteReservee = 0;
 
+    @Column(name = "quantite_disponible")
+    private Integer quantiteDisponible;
 
 }

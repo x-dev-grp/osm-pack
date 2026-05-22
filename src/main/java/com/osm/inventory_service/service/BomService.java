@@ -2,6 +2,7 @@ package com.osm.inventory_service.service;
 
 import com.osm.inventory_service.dto.BOMDto;
 import com.osm.inventory_service.dto.BomLineDto;
+import com.osm.inventory_service.exception.ResourceNotFoundException;
 import com.osm.inventory_service.entity.ArticleSec;
 import com.osm.inventory_service.entity.BOM;
 import com.osm.inventory_service.entity.BomLine;
@@ -48,7 +49,7 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
 
     @Transactional(readOnly = true)
     public BOMDto getBomById(UUID id) {
-        BOM bom = bomRepository.findById(id).orElseThrow(() -> new RuntimeException("BOM non trouvee avec l'id : " + id));
+        BOM bom = bomRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("BOM non trouvee avec l'id : " + id));
         return convertToDto(bom);
     }
 
@@ -60,7 +61,7 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
     @Transactional
     public BOMDto createBom(BOMDto bomDto) {
         ProduitFinal produitFinal = produitFinalRepository.findById(bomDto.getProductId())
-                .orElseThrow(() -> new RuntimeException("Produit non trouve avec l'id : " + bomDto.getProductId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Produit non trouve avec l'id : " + bomDto.getProductId()));
         int count = bomRepository.findByProduitFinalId(bomDto.getProductId()).size();
         String version = "V" + (count + 1);
 
@@ -70,7 +71,7 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
 
         List<BomLine> lines = bomDto.getLines().stream().map(lineDto -> {
             ArticleSec article = articleRepository.findById(lineDto.getArticleId())
-                    .orElseThrow(() -> new RuntimeException("Article non trouve avec l'id : " + lineDto.getArticleId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Article non trouve avec l'id : " + lineDto.getArticleId()));
             BomLine line = new BomLine();
             line.setBom(bom);
             line.setArticle(article);
@@ -86,10 +87,10 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
 
     @Transactional
     public BOMDto updateBom(UUID id, BOMDto bomDto) {
-        BOM bom = bomRepository.findById(id).orElseThrow(() -> new RuntimeException("BOM non trouvee avec l'id : " + id));
+        BOM bom = bomRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("BOM non trouvee avec l'id : " + id));
         if (!bom.getProduitFinal().getId().equals(bomDto.getProductId())) {
             ProduitFinal newProduitFinal = produitFinalRepository.findById(bomDto.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Produit non trouve avec l'id : " + bomDto.getProductId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Produit non trouve avec l'id : " + bomDto.getProductId()));
             bom.setProduitFinal(newProduitFinal);
         }
         bom.setVersion(bomDto.getVersion());
@@ -97,7 +98,7 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
 
         List<BomLine> newLines = bomDto.getLines().stream().map(lineDto -> {
             ArticleSec article = articleRepository.findById(lineDto.getArticleId())
-                    .orElseThrow(() -> new RuntimeException("Article non trouve avec l'id : " + lineDto.getArticleId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Article non trouve avec l'id : " + lineDto.getArticleId()));
             BomLine line = new BomLine();
             line.setBom(bom);
             line.setArticle(article);
@@ -118,7 +119,7 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
     @Transactional
     public void deleteBom(UUID id) {
         if (!bomRepository.existsById(id)) {
-            throw new RuntimeException("BOM non trouvee avec l'id : " + id);
+            throw new ResourceNotFoundException("BOM non trouvee avec l'id : " + id);
         }
         bomRepository.deleteById(id);
     }

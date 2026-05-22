@@ -131,15 +131,13 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
         if (quantiteActuelle < quantite) {
             throw new RuntimeException("Stock actuel insuffisant pour la consommation. Disponible: " + quantiteActuelle);
         }
+        if (quantiteReservee < quantite) {
+            throw new RuntimeException("Stock reserve insuffisant pour la consommation. Reserve: " + quantiteReservee);
+        }
 
         // Decrease both total stock and reserved stock
         stock.setQuantiteActuelle(quantiteActuelle - quantite);
-
-        if (quantiteReservee < quantite) {
-            stock.setQuantiteReservee(0);
-        } else {
-            stock.setQuantiteReservee(quantiteReservee - quantite);
-        }
+        stock.setQuantiteReservee(quantiteReservee - quantite);
 
         StockSec updatedStock = stockRepository.save(stock);
 

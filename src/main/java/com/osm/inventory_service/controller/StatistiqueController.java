@@ -1,4 +1,4 @@
-/*package com.osm.inventory_service.controller;
+ package com.osm.inventory_service.controller;
 
 import com.osm.inventory_service.dto.StatistiquesDTO;
 import com.osm.inventory_service.service.StatistiqueService;
@@ -58,4 +58,4 @@ public class StatistiqueController {
                 "totalArticles", stats.getTotalArticles()
         );
     }
-}*/
+}
