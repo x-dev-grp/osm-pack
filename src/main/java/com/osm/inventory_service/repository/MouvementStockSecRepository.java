@@ -4,6 +4,7 @@ import com.osm.inventory_service.entity.MouvementStockSec;
 import com.xdev.xdevbase.repos.BaseRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -12,4 +13,5 @@ import java.util.UUID;
 public interface MouvementStockSecRepository extends BaseRepository<MouvementStockSec> {
     List<MouvementStockSec> findByArticleId(UUID articleId);
 
+    List<MouvementStockSec> getMouvementStockSecsByDateMouvementBetween(LocalDateTime dateMouvementAfter, LocalDateTime dateMouvementBefore);
 }
