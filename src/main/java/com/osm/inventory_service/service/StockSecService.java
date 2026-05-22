@@ -361,6 +361,23 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
         return convertToDto(updatedStock);
     }
 
+    @Transactional
+    public StockSecDto getOrCreateStockByArticle(UUID articleId) {
+        articleSecService.getArticleById(articleId);
+
+        Optional<StockSec> existing = stockRepository.findByArticleId(articleId);
+        if (existing.isPresent()) {
+            return convertToDto(existing.get());
+        }
+
+        ArticleSec article = articleSecService.getArticleEntityById(articleId);
+        StockSec created = new StockSec();
+        created.setArticle(article);
+        created.setQuantiteActuelle(0);
+        created.setQuantiteReservee(0);
+        return convertToDto(stockRepository.save(created));
+    }
+
     @Override
     public Set<Action> actionsMapping(StockSec StockSec) {
         Set<Action> actions = new HashSet<>();
