@@ -57,7 +57,7 @@ public class StockSecController extends BaseControllerImpl<StockSec, StockSecDto
     @GetMapping("/article/{articleId}")
     public ResponseEntity<?> getStockByArticle(@PathVariable UUID articleId) {
         try {
-            StockSecDto stock = stockService.getStockByArticle(articleId);
+            StockSecDto stock = stockService.getOrCreateStockByArticle(articleId);
             return ResponseEntity.ok(attachPermittedActions(stock));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
