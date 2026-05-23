@@ -1,8 +1,10 @@
 package com.osm.inventory_service.controller;
 
 import com.osm.inventory_service.dto.BOMDto;
+import com.osm.inventory_service.dto.MaterialNeedLineDto;
 import com.osm.inventory_service.entity.BOM;
 import com.osm.inventory_service.service.BomService;
+import com.osm.inventory_service.service.MaterialNeedsService;
 import com.xdev.xdevbase.controllers.impl.BaseControllerImpl;
 import com.xdev.xdevbase.services.BaseService;
 import jakarta.validation.Valid;
@@ -13,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -20,13 +23,16 @@ import java.util.UUID;
 public class BomController extends BaseControllerImpl<BOM, BOMDto, BOMDto> {
 
     private final BomService bomService;
+    private final MaterialNeedsService materialNeedsService;
 
     @Autowired
     public BomController(BaseService<BOM, BOMDto, BOMDto> baseService,
                          ModelMapper modelMapper,
-                         BomService bomService) {
+                         BomService bomService,
+                         MaterialNeedsService materialNeedsService) {
         super(baseService, modelMapper);
         this.bomService = bomService;
+        this.materialNeedsService = materialNeedsService;
     }
 
     // Fixed as part of TICKET-004 & TICKET-010: Simplified to rely on GlobalExceptionHandler and added PreAuthorize
@@ -48,6 +54,29 @@ public class BomController extends BaseControllerImpl<BOM, BOMDto, BOMDto> {
     public ResponseEntity<?> getBomsByProduct(@PathVariable UUID productId) {
         List<BOMDto> boms = bomService.getBomsByProduct(productId);
         return ResponseEntity.ok(attachPermittedActions(boms));
+    }
+
+    @GetMapping({"/product/{productId}/active", "/sku/{productId}/active"})
+    public ResponseEntity<?> getActiveBomForProduct(@PathVariable UUID productId) {
+        BOMDto bom = bomService.getActiveBomForProduct(productId);
+        if (bom == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Aucune nomenclature active pour ce produit"));
+        }
+        return ResponseEntity.ok(attachPermittedActions(bom));
+    }
+
+    @PutMapping("/{id}/activate")
+    public ResponseEntity<?> activateBom(@PathVariable UUID id) {
+        BOMDto activated = bomService.activateBom(id);
+        return ResponseEntity.ok(attachPermittedActions(activated));
+    }
+
+    @GetMapping("/{id}/material-needs")
+    public ResponseEntity<List<MaterialNeedLineDto>> getMaterialNeeds(
+            @PathVariable UUID id,
+            @RequestParam(name = "quantity") double quantity) {
+        return ResponseEntity.ok(materialNeedsService.computeForBom(id, quantity));
     }
 
     // Fixed as part of TICKET-004, TICKET-007 & TICKET-010: Simplified, added Validated RequestBody and PreAuthorize

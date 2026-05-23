@@ -18,6 +18,10 @@ public class BOM extends BaseEntity {
     @JoinColumn(name = "sku_id")
     private ProduitFinal produitFinal;
     private String version;
+
+    @Column(nullable = false)
+    private boolean active = false;
+
     @OneToMany(mappedBy = "bom", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BomLine> lines = new ArrayList<>();
 }

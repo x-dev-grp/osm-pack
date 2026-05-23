@@ -82,31 +82,39 @@ public class ArticleSec extends BaseEntity {
         throw new IllegalStateException("Type de configuration inconnu");
     }
 
-    private void validateBusinessRules() {
-        switch (this.categorie) {
-            case UNITE:
+        private void validateBusinessRules() {
+            if (this.categorie == CategorieArticle.UNITE) {
                 UniteConfig u = (UniteConfig) configuration;
-                if (u.getVolumeMl() <= 0) throw new IllegalArgumentException("Volume unitaire invalide");
-                break;
-            case COLIS:
+                if (u.getVolumeMl() <= 0) {
+                    throw new IllegalArgumentException("Volume unitaire invalide");
+                }
+            }
+
+            if (this.categorie == CategorieArticle.COLIS) {
                 ColisConfig c = (ColisConfig) configuration;
-                if (c.getUnitsPerColis() <= 0) throw new IllegalArgumentException("Nombre d'unités par colis invalide");
-                if (c.getDimensions() == null) throw new IllegalArgumentException("Dimensions du colis requises");
-                break;
-            case PALETTE:
+                if (c.getUnitsPerColis() <= 0) {
+                    throw new IllegalArgumentException("Nombre d'unités par colis invalide");
+                }
+                if (c.getDimensions() == null) {
+                    throw new IllegalArgumentException("Dimensions du colis requises");
+                }
+            }
+
+            if (this.categorie == CategorieArticle.PALETTE) {
                 PaletteConfig p = (PaletteConfig) configuration;
-                if (p.getColisPerLayer() <= 0 || p.getNumberOfLayers() <= 0)
+                if (p.getColisPerLayer() <= 0 || p.getNumberOfLayers() <= 0) {
                     throw new IllegalArgumentException("Configuration palette incomplète");
-                if (p.getColisId() == null)
+                }
+                if (p.getColisId() == null) {
                     throw new IllegalArgumentException("La palette doit référencer un colis");
-                break;
-            case EMBALLAGE:
+                }
+            }
+
+            if (this.categorie == CategorieArticle.EMBALLAGE) {
                 EmballageConfig e = (EmballageConfig) configuration;
-                if (e.getDimensions() == null && e.getPoidsGrammes() == null)
+                if (e.getDimensions() == null && e.getPoidsGrammes() == null) {
                     throw new IllegalArgumentException("Emballage doit avoir au moins dimensions ou poids");
-                break;
-            default:
-                break;
-        }
-    }
+                }
+            }
+          }
 }

@@ -8,8 +8,12 @@ import com.osm.inventory_service.dto.ArticleSecDto;
 import com.osm.inventory_service.dto.FournisseurDto;
 import com.osm.inventory_service.entity.ArticleSec;
 import com.osm.inventory_service.entity.Fournisseur;
+import com.osm.inventory_service.exception.InventoryBusinessException;
+import com.osm.inventory_service.entity.StockSec;
 import com.osm.inventory_service.repository.ArticleSecRepository;
+import com.osm.inventory_service.repository.BomLineRepository;
 import com.osm.inventory_service.repository.FournisseurRepository;
+import com.osm.inventory_service.repository.StockSecRepository;
 import com.xdev.xdevbase.models.Action;
 import com.xdev.xdevbase.qr.model.QrCodeInfo;
 import com.xdev.xdevbase.qr.model.QrResolveResponse;
@@ -34,6 +38,8 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
     private final FournisseurRepository fournisseurRepository;
     private final ModelMapper modelMapper;
     private final StockSecService stockSecService;
+    private final StockSecRepository stockSecRepository;
+    private final BomLineRepository bomLineRepository;
     private final ObjectMapper objectMapper;
 
     @Lazy
@@ -43,12 +49,16 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
                              FournisseurRepository fournisseurRepository,
                              ModelMapper modelMapper,
                              StockSecService stockSecService,
+                             StockSecRepository stockSecRepository,
+                             BomLineRepository bomLineRepository,
                              ObjectMapper objectMapper) {
         super(repository, modelMapper);
         this.articleRepository = articleRepository;
         this.fournisseurRepository = fournisseurRepository;
         this.modelMapper = modelMapper;
         this.stockSecService = stockSecService;
+        this.stockSecRepository = stockSecRepository;
+        this.bomLineRepository = bomLineRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -159,6 +169,25 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
     @Transactional
     public ArticleSecDto desactiverArticle(UUID id) {
         ArticleSec article = getArticleEntityById(id);
+
+        stockSecRepository.findByArticleId(id).ifPresent(stock -> {
+            int actuelle = stock.getQuantiteActuelle() != null ? stock.getQuantiteActuelle() : 0;
+            int reservee = stock.getQuantiteReservee() != null ? stock.getQuantiteReservee() : 0;
+            if (actuelle > 0 || reservee > 0) {
+                throw new InventoryBusinessException(
+                        "ARTICLE_STOCK_NOT_EMPTY",
+                        "Impossible de desactiver l'article : stock actuel=" + actuelle + ", reserve=" + reservee
+                );
+            }
+        });
+
+        if (bomLineRepository.countByArticle_Id(id) > 0) {
+            throw new InventoryBusinessException(
+                    "ARTICLE_USED_IN_BOM",
+                    "Impossible de desactiver l'article : il est utilise dans une ou plusieurs nomenclatures"
+            );
+        }
+
         article.setActif(false);
         ArticleSec updatedArticle = articleRepository.save(article);
         return convertToDto(updatedArticle);

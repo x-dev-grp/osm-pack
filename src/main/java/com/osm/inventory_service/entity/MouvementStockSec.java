@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
+import java.util.UUID;
 import com.osm.inventory_service.Enum.TypeMouvement;
 import org.hibernate.envers.Audited;
 
@@ -31,5 +32,11 @@ public class MouvementStockSec  extends BaseEntity {
     private String motif;
 
     private LocalDateTime dateMouvement;
+
+    @Column(name = "reference_type")
+    private String referenceType;
+
+    @Column(name = "reference_id")
+    private UUID referenceId;
 
 }

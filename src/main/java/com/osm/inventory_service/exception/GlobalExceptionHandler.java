@@ -19,4 +19,22 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
     }
+
+    @ExceptionHandler(InventoryBusinessException.class)
+    public ResponseEntity<?> handleInventoryBusiness(InventoryBusinessException ex) {
+        return ResponseEntity.status(ex.getStatus()).body(Map.of(
+                "code", ex.getCode(),
+                "error", ex.getMessage(),
+                "message", ex.getMessage()
+        ));
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<?> handleRuntime(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "code", "INVENTORY_ERROR",
+                "error", ex.getMessage(),
+                "message", ex.getMessage()
+        ));
+    }
 }

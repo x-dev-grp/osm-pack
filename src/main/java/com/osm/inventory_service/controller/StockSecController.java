@@ -1,5 +1,6 @@
 package com.osm.inventory_service.controller;
 
+import com.osm.inventory_service.dto.ArticleStockSummaryDto;
 import com.osm.inventory_service.dto.MouvementStockSecDto;
 import com.osm.inventory_service.dto.StockSecDto;
 import com.osm.inventory_service.entity.StockSec;
@@ -30,6 +31,11 @@ public class StockSecController extends BaseControllerImpl<StockSec, StockSecDto
                               StockSecService stockService) {
         super(baseService, modelMapper);
         this.stockService = stockService;
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<List<ArticleStockSummaryDto>> getStockSummary() {
+        return ResponseEntity.ok(stockService.getAllStockSummaries());
     }
 
     @GetMapping
@@ -177,7 +183,11 @@ public class StockSecController extends BaseControllerImpl<StockSec, StockSecDto
         try {
             Integer quantite = (Integer) payload.get("quantite");
             String motif = (String) payload.get("motif");
-            StockSecDto result = stockService.consommerReservation(articleId, quantite, motif);
+            String referenceType = payload.get("referenceType") != null ? payload.get("referenceType").toString() : null;
+            UUID referenceId = payload.get("referenceId") != null
+                    ? UUID.fromString(payload.get("referenceId").toString())
+                    : null;
+            StockSecDto result = stockService.consommerReservation(articleId, quantite, motif, referenceType, referenceId);
             return ResponseEntity.ok(attachPermittedActions(result));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
