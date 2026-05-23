@@ -1,9 +1,11 @@
 package com.osm.inventory_service.service;
 
 import com.osm.inventory_service.Enum.TypeMouvement;
+import com.osm.inventory_service.dto.ArticleStockSummaryDto;
 import com.osm.inventory_service.dto.EmplacementStockDto;
 import com.osm.inventory_service.dto.MouvementStockSecDto;
 import com.osm.inventory_service.dto.StockSecDto;
+import com.osm.inventory_service.exception.InventoryBusinessException;
 import com.osm.inventory_service.entity.ArticleSec;
 import com.osm.inventory_service.entity.EmplacementStock;
 import com.osm.inventory_service.entity.MouvementStockSec;
@@ -68,7 +70,13 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
 
     private StockSec saveWithValidation(StockSec stock, String operation) {
         validateStockInvariants(stock, operation);
-        return stockRepository.save(stock);
+        StockSec savedStock = stockRepository.save(stock);
+        if (savedStock.getEmplacement() != null) {
+            EmplacementStock emplacement = savedStock.getEmplacement();
+            emplacement.setCapaciteActuelle(String.valueOf(safe(savedStock.getQuantiteActuelle())));
+            emplacementRepository.save(emplacement);
+        }
+        return savedStock;
     }
 
     private StockSecDto convertToDto(StockSec stock) {
@@ -107,7 +115,10 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
         int quantiteDisponible = quantiteActuelle - quantiteReservee;
 
         if (quantiteDisponible < quantite) {
-            throw new RuntimeException("Stock disponible insuffisant pour la reservation. Disponible: " + quantiteDisponible);
+            throw new InventoryBusinessException(
+                    "INSUFFICIENT_STOCK",
+                    "Stock disponible insuffisant pour la reservation. Disponible: " + quantiteDisponible
+            );
         }
 
         stock.setQuantiteReservee(quantiteReservee + quantite);
@@ -141,6 +152,16 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
 
     @Transactional
     public StockSecDto consommerReservation(UUID articleId, Integer quantite, String motif) {
+        return consommerReservation(articleId, quantite, motif, null, null);
+    }
+
+    @Transactional
+    public StockSecDto consommerReservation(
+            UUID articleId,
+            Integer quantite,
+            String motif,
+            String referenceType,
+            UUID referenceId) {
         if (articleId == null) {
             throw new RuntimeException("L'identifiant de l'article est obligatoire");
         }
@@ -165,13 +186,13 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
         stock.setQuantiteReservee(quantiteReservee - quantite);
         StockSec updatedStock = saveWithValidation(stock, "consommer-reservation");
 
-        MouvementStockSec mouvement = new MouvementStockSec();
-        mouvement.setArticle(stock.getArticle());
-        mouvement.setQuantite(quantite);
-        mouvement.setTypeMouvement(TypeMouvement.SORTIE);
-        mouvement.setMotif((motif == null ? "" : motif) + " (Consommation Reservee)");
-        mouvement.setDateMouvement(LocalDateTime.now());
-        mouvementStockSecRepository.save(mouvement);
+        recordMouvement(
+                stock,
+                quantite,
+                TypeMouvement.SORTIE,
+                (motif == null ? "" : motif) + " (Consommation Reservee)",
+                referenceType != null ? referenceType : "RESERVATION_CONSUMPTION",
+                referenceId);
 
         return convertToDto(updatedStock);
     }
@@ -230,18 +251,17 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
         stock.setQuantiteActuelle(quantiteActuelle + quantite);
         StockSec updatedStock = saveWithValidation(stock, "entree");
 
-        MouvementStockSec mouvement = new MouvementStockSec();
-        mouvement.setArticle(stock.getArticle());
-        mouvement.setQuantite(quantite);
-        mouvement.setTypeMouvement(TypeMouvement.ENTREE);
-        mouvement.setMotif(motif);
-        mouvement.setDateMouvement(LocalDateTime.now());
-        mouvementStockSecRepository.save(mouvement);
+        recordMouvement(stock, quantite, TypeMouvement.ENTREE, motif, null, null);
         return convertToDto(updatedStock);
     }
 
     @Transactional
     public StockSecDto sortieStock(UUID articleId, Integer quantite, String motif) {
+        return sortieStock(articleId, quantite, motif, null, null);
+    }
+
+    @Transactional
+    public StockSecDto sortieStock(UUID articleId, Integer quantite, String motif, String referenceType, UUID referenceId) {
         if (articleId == null) {
             throw new RuntimeException("L'identifiant de l'article est obligatoire");
         }
@@ -256,7 +276,8 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
         int quantiteDisponible = quantiteActuelle - quantiteReservee;
 
         if (quantiteDisponible < quantite) {
-            throw new RuntimeException(
+            throw new InventoryBusinessException(
+                    "INSUFFICIENT_STOCK",
                     "Stock disponible insuffisant (hors reservations). Disponible: " + quantiteDisponible +
                             ", Demande: " + quantite
             );
@@ -264,15 +285,43 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
 
         stock.setQuantiteActuelle(quantiteActuelle - quantite);
         StockSec updatedStock = saveWithValidation(stock, "sortie");
+        recordMouvement(stock, quantite, TypeMouvement.SORTIE, motif, referenceType, referenceId);
+        return convertToDto(updatedStock);
+    }
 
+    @Transactional(readOnly = true)
+    public List<ArticleStockSummaryDto> getAllStockSummaries() {
+        return stockRepository.findAll().stream().map(stock -> {
+            ArticleStockSummaryDto summary = new ArticleStockSummaryDto();
+            if (stock.getArticle() != null) {
+                summary.setArticleId(stock.getArticle().getId());
+                int minimum = stock.getArticle().getStockMinimum() != null ? stock.getArticle().getStockMinimum() : 0;
+                int actuelle = safe(stock.getQuantiteActuelle());
+                summary.setBelowMinimum(actuelle <= minimum);
+            }
+            summary.setQuantiteActuelle(safe(stock.getQuantiteActuelle()));
+            summary.setQuantiteReservee(safe(stock.getQuantiteReservee()));
+            summary.setQuantiteDisponible(safe(stock.getQuantiteActuelle()) - safe(stock.getQuantiteReservee()));
+            return summary;
+        }).collect(Collectors.toList());
+    }
+
+    private void recordMouvement(
+            StockSec stock,
+            int quantite,
+            TypeMouvement type,
+            String motif,
+            String referenceType,
+            UUID referenceId) {
         MouvementStockSec mouvement = new MouvementStockSec();
         mouvement.setArticle(stock.getArticle());
         mouvement.setQuantite(quantite);
-        mouvement.setTypeMouvement(TypeMouvement.SORTIE);
+        mouvement.setTypeMouvement(type);
         mouvement.setMotif(motif);
         mouvement.setDateMouvement(LocalDateTime.now());
+        mouvement.setReferenceType(referenceType);
+        mouvement.setReferenceId(referenceId);
         mouvementStockSecRepository.save(mouvement);
-        return convertToDto(updatedStock);
     }
 
     @Transactional
@@ -353,6 +402,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
 
         stock.setEmplacement(emplacement);
         emplacement.setDisponible(false);
+        emplacement.setCapaciteActuelle(String.valueOf(safe(stock.getQuantiteActuelle())));
         emplacementRepository.save(emplacement);
         StockSec updatedStock = stockRepository.save(stock);
         return convertToDto(updatedStock);
@@ -370,10 +420,12 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
 
         stock.setEmplacement(nouvelEmplacement);
         nouvelEmplacement.setDisponible(false);
+        nouvelEmplacement.setCapaciteActuelle(String.valueOf(safe(stock.getQuantiteActuelle())));
         emplacementRepository.save(nouvelEmplacement);
 
         if (ancienEmplacement != null && !Objects.equals(ancienEmplacement.getId(), nouvelEmplacement.getId())) {
             ancienEmplacement.setDisponible(true);
+            ancienEmplacement.setCapaciteActuelle("0");
             emplacementRepository.save(ancienEmplacement);
         }
 
@@ -431,6 +483,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
             boolean stillUsed = remaining.stream().anyMatch(s -> !s.getId().equals(stockId));
             if (!stillUsed) {
                 current.setDisponible(true);
+                current.setCapaciteActuelle("0");
                 emplacementRepository.save(current);
             }
         }
