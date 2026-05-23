@@ -32,6 +32,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
     private final ArticleSecService articleSecService;
     private final EmplacementStockRepository emplacementRepository;
     private final ModelMapper modelMapper;
+
     @Lazy
     @Autowired
     public StockSecService(BaseRepository<StockSec> repository, StockSecRepository stockRepository, MouvementStockSecRepository mouvementStockSecRepository, ArticleSecService articleSecService, EmplacementStockRepository emplacementRepository, ModelMapper modelMapper) {
@@ -43,14 +44,38 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
         this.modelMapper = modelMapper;
     }
 
+    private int safe(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private void validateStockInvariants(StockSec stock, String operation) {
+        int quantiteActuelle = safe(stock.getQuantiteActuelle());
+        int quantiteReservee = safe(stock.getQuantiteReservee());
+
+        if (quantiteActuelle < 0) {
+            throw new RuntimeException("Operation " + operation + " refusee: quantite actuelle negative");
+        }
+        if (quantiteReservee < 0) {
+            throw new RuntimeException("Operation " + operation + " refusee: quantite reservee negative");
+        }
+        if (quantiteReservee > quantiteActuelle) {
+            throw new RuntimeException(
+                    "Operation " + operation + " refusee: quantite reservee (" + quantiteReservee +
+                            ") > quantite actuelle (" + quantiteActuelle + ")"
+            );
+        }
+    }
+
+    private StockSec saveWithValidation(StockSec stock, String operation) {
+        validateStockInvariants(stock, operation);
+        return stockRepository.save(stock);
+    }
+
     private StockSecDto convertToDto(StockSec stock) {
         StockSecDto dto = modelMapper.map(stock, StockSecDto.class);
 
-        dto.setQuantiteReservee(stock.getQuantiteReservee() != null ? stock.getQuantiteReservee() : 0);
-        dto.setQuantiteDisponible(
-                (stock.getQuantiteActuelle() != null ? stock.getQuantiteActuelle() : 0) -
-                (stock.getQuantiteReservee() != null ? stock.getQuantiteReservee() : 0)
-        );
+        dto.setQuantiteReservee(safe(stock.getQuantiteReservee()));
+        dto.setQuantiteDisponible(safe(stock.getQuantiteActuelle()) - safe(stock.getQuantiteReservee()));
 
         if (stock.getArticle() != null) {
             dto.setArticleId(stock.getArticle().getId());
@@ -71,21 +96,22 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
             throw new RuntimeException("L'identifiant de l'article est obligatoire");
         }
         if (quantite == null || quantite <= 0) {
-            throw new RuntimeException("La quantité de réservation doit être positive");
+            throw new RuntimeException("La quantite de reservation doit etre positive");
         }
 
         StockSec stock = stockRepository.findByArticleId(articleId)
-                .orElseThrow(() -> new RuntimeException("Aucun stock trouvé pour cet article"));
+                .orElseThrow(() -> new RuntimeException("Aucun stock trouve pour cet article"));
 
-        Integer quantiteActuelle = stock.getQuantiteActuelle() != null ? stock.getQuantiteActuelle() : 0;
-        Integer quantiteReservee = stock.getQuantiteReservee() != null ? stock.getQuantiteReservee() : 0;
+        int quantiteActuelle = safe(stock.getQuantiteActuelle());
+        int quantiteReservee = safe(stock.getQuantiteReservee());
+        int quantiteDisponible = quantiteActuelle - quantiteReservee;
 
-        if (quantiteActuelle - quantiteReservee < quantite) {
-            throw new RuntimeException("Stock disponible insuffisant pour la réservation. Disponible: " + (quantiteActuelle - quantiteReservee));
+        if (quantiteDisponible < quantite) {
+            throw new RuntimeException("Stock disponible insuffisant pour la reservation. Disponible: " + quantiteDisponible);
         }
 
         stock.setQuantiteReservee(quantiteReservee + quantite);
-        StockSec updatedStock = stockRepository.save(stock);
+        StockSec updatedStock = saveWithValidation(stock, "reserver");
         return convertToDto(updatedStock);
     }
 
@@ -95,21 +121,21 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
             throw new RuntimeException("L'identifiant de l'article est obligatoire");
         }
         if (quantite == null || quantite <= 0) {
-            throw new RuntimeException("La quantité d'annulation doit être positive");
+            throw new RuntimeException("La quantite d'annulation doit etre positive");
         }
 
         StockSec stock = stockRepository.findByArticleId(articleId)
                 .orElseThrow(() -> new RuntimeException("Aucun stock trouvé pour cet article"));
 
-        Integer quantiteReservee = stock.getQuantiteReservee() != null ? stock.getQuantiteReservee() : 0;
-
+        int quantiteReservee = safe(stock.getQuantiteReservee());
         if (quantiteReservee < quantite) {
-            stock.setQuantiteReservee(0);
-        } else {
-            stock.setQuantiteReservee(quantiteReservee - quantite);
+            throw new RuntimeException(
+                    "Annulation refusee: reserve insuffisant. Reserve: " + quantiteReservee + ", demande: " + quantite
+            );
         }
 
-        StockSec updatedStock = stockRepository.save(stock);
+        stock.setQuantiteReservee(quantiteReservee - quantite);
+        StockSec updatedStock = saveWithValidation(stock, "annuler-reservation");
         return convertToDto(updatedStock);
     }
 
@@ -119,14 +145,14 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
             throw new RuntimeException("L'identifiant de l'article est obligatoire");
         }
         if (quantite == null || quantite <= 0) {
-            throw new RuntimeException("La quantité de consommation doit être positive");
+            throw new RuntimeException("La quantite de consommation doit etre positive");
         }
 
         StockSec stock = stockRepository.findByArticleId(articleId)
-                .orElseThrow(() -> new RuntimeException("Aucun stock trouvé pour cet article"));
+                .orElseThrow(() -> new RuntimeException("Aucun stock trouve pour cet article"));
 
-        Integer quantiteActuelle = stock.getQuantiteActuelle() != null ? stock.getQuantiteActuelle() : 0;
-        Integer quantiteReservee = stock.getQuantiteReservee() != null ? stock.getQuantiteReservee() : 0;
+        int quantiteActuelle = safe(stock.getQuantiteActuelle());
+        int quantiteReservee = safe(stock.getQuantiteReservee());
 
         if (quantiteActuelle < quantite) {
             throw new RuntimeException("Stock actuel insuffisant pour la consommation. Disponible: " + quantiteActuelle);
@@ -135,17 +161,15 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
             throw new RuntimeException("Stock reserve insuffisant pour la consommation. Reserve: " + quantiteReservee);
         }
 
-        // Decrease both total stock and reserved stock
         stock.setQuantiteActuelle(quantiteActuelle - quantite);
         stock.setQuantiteReservee(quantiteReservee - quantite);
-
-        StockSec updatedStock = stockRepository.save(stock);
+        StockSec updatedStock = saveWithValidation(stock, "consommer-reservation");
 
         MouvementStockSec mouvement = new MouvementStockSec();
         mouvement.setArticle(stock.getArticle());
         mouvement.setQuantite(quantite);
         mouvement.setTypeMouvement(TypeMouvement.SORTIE);
-        mouvement.setMotif(motif + " (Consommation Réservée)");
+        mouvement.setMotif((motif == null ? "" : motif) + " (Consommation Reservee)");
         mouvement.setDateMouvement(LocalDateTime.now());
         mouvementStockSecRepository.save(mouvement);
 
@@ -154,7 +178,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
 
     public StockSec getStockEntityById(UUID id) {
         return stockRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Stock non trouvé avec ID: " + id));
+                .orElseThrow(() -> new RuntimeException("Stock non trouve avec ID: " + id));
     }
 
     public List<StockSecDto> getAllStocks() {
@@ -170,25 +194,24 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
 
     public StockSecDto getStockByArticle(UUID articleId) {
         articleSecService.getArticleById(articleId);
-
         StockSec stock = stockRepository.findByArticleId(articleId)
-                .orElseThrow(() -> new RuntimeException("Aucun stock trouvé pour l'article ID: " + articleId));
+                .orElseThrow(() -> new RuntimeException("Aucun stock trouve pour l'article ID: " + articleId));
         return convertToDto(stock);
     }
-
 
     @Transactional
     public StockSecDto createStockForArticle(UUID articleId) {
         ArticleSec article = articleSecService.getArticleEntityById(articleId);
         if (stockRepository.findByArticleId(articleId).isPresent()) {
-            throw new RuntimeException("Un stock existe déjà pour cet article");
+            throw new RuntimeException("Un stock existe deja pour cet article");
         }
 
         StockSec stock = new StockSec();
         stock.setArticle(article);
         stock.setQuantiteActuelle(0);
+        stock.setQuantiteReservee(0);
 
-        StockSec savedStock = stockRepository.save(stock);
+        StockSec savedStock = saveWithValidation(stock, "create");
         return convertToDto(savedStock);
     }
 
@@ -198,18 +221,17 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
             throw new RuntimeException("L'identifiant de l'article est obligatoire");
         }
         if (quantite == null || quantite <= 0) {
-            throw new RuntimeException("La quantité doit être positive");
+            throw new RuntimeException("La quantite doit etre positive");
         }
         StockSec stock = stockRepository.findByArticleId(articleId)
-                .orElseThrow(() -> new RuntimeException("Aucun stock trouvé pour cet article"));
+                .orElseThrow(() -> new RuntimeException("Aucun stock trouve pour cet article"));
 
-        Integer quantiteActuelle = stock.getQuantiteActuelle() != null ? stock.getQuantiteActuelle() : 0;
+        int quantiteActuelle = safe(stock.getQuantiteActuelle());
         stock.setQuantiteActuelle(quantiteActuelle + quantite);
-        StockSec updatedStock = stockRepository.save(stock);
-        ArticleSec article = stock.getArticle();
+        StockSec updatedStock = saveWithValidation(stock, "entree");
 
         MouvementStockSec mouvement = new MouvementStockSec();
-        mouvement.setArticle(article);
+        mouvement.setArticle(stock.getArticle());
         mouvement.setQuantite(quantite);
         mouvement.setTypeMouvement(TypeMouvement.ENTREE);
         mouvement.setMotif(motif);
@@ -224,13 +246,14 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
             throw new RuntimeException("L'identifiant de l'article est obligatoire");
         }
         if (quantite == null || quantite <= 0) {
-            throw new RuntimeException("La quantité doit être positive");
+            throw new RuntimeException("La quantite doit etre positive");
         }
         StockSec stock = stockRepository.findByArticleId(articleId)
-                .orElseThrow(() -> new RuntimeException("Aucun stock trouvé pour cet article"));
-        Integer quantiteActuelle = stock.getQuantiteActuelle() != null ? stock.getQuantiteActuelle() : 0;
-        Integer quantiteReservee = stock.getQuantiteReservee() != null ? stock.getQuantiteReservee() : 0;
-        Integer quantiteDisponible = quantiteActuelle - quantiteReservee;
+                .orElseThrow(() -> new RuntimeException("Aucun stock trouve pour cet article"));
+
+        int quantiteActuelle = safe(stock.getQuantiteActuelle());
+        int quantiteReservee = safe(stock.getQuantiteReservee());
+        int quantiteDisponible = quantiteActuelle - quantiteReservee;
 
         if (quantiteDisponible < quantite) {
             throw new RuntimeException(
@@ -238,8 +261,10 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
                             ", Demande: " + quantite
             );
         }
+
         stock.setQuantiteActuelle(quantiteActuelle - quantite);
-        StockSec updatedStock = stockRepository.save(stock);
+        StockSec updatedStock = saveWithValidation(stock, "sortie");
+
         MouvementStockSec mouvement = new MouvementStockSec();
         mouvement.setArticle(stock.getArticle());
         mouvement.setQuantite(quantite);
@@ -256,13 +281,22 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
             throw new RuntimeException("L'identifiant de l'article est obligatoire");
         }
         if (nouvelleQuantite == null || nouvelleQuantite < 0) {
-            throw new RuntimeException("La quantité ne peut pas être négative");
+            throw new RuntimeException("La quantite ne peut pas etre negative");
         }
         StockSec stock = stockRepository.findByArticleId(articleId)
-                .orElseThrow(() -> new RuntimeException("Aucun stock trouvé pour cet article"));
-        Integer ancienneQuantite = stock.getQuantiteActuelle() != null ? stock.getQuantiteActuelle() : 0;
+                .orElseThrow(() -> new RuntimeException("Aucun stock trouve pour cet article"));
+
+        int ancienneQuantite = safe(stock.getQuantiteActuelle());
+        int quantiteReservee = safe(stock.getQuantiteReservee());
+        if (nouvelleQuantite < quantiteReservee) {
+            throw new RuntimeException(
+                    "Ajustement refuse: quantite actuelle (" + nouvelleQuantite +
+                            ") < quantite reservee (" + quantiteReservee + ")"
+            );
+        }
+
         stock.setQuantiteActuelle(nouvelleQuantite);
-        StockSec updatedStock = stockRepository.save(stock);
+        StockSec updatedStock = saveWithValidation(stock, "ajuster");
 
         MouvementStockSec mouvement = new MouvementStockSec();
         mouvement.setArticle(stock.getArticle());
@@ -273,6 +307,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
         mouvementStockSecRepository.save(mouvement);
         return convertToDto(updatedStock);
     }
+
     public List<MouvementStockSecDto> getAllMouvementsDto() {
         return mouvementStockSecRepository.findAll().stream()
                 .map(mouvement -> modelMapper.map(mouvement, MouvementStockSecDto.class))
@@ -281,7 +316,6 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
 
     public List<MouvementStockSecDto> getMouvementsByArticleDto(UUID articleId) {
         articleSecService.getArticleById(articleId);
-
         return mouvementStockSecRepository.findByArticleId(articleId).stream()
                 .map(mouvement -> modelMapper.map(mouvement, MouvementStockSecDto.class))
                 .collect(Collectors.toList());
@@ -289,7 +323,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
 
     public List<StockSecDto> getStocksByEmplacement(UUID emplacementId) {
         emplacementRepository.findById(emplacementId)
-                .orElseThrow(() -> new RuntimeException("Emplacement non trouvé avec ID: " + emplacementId));
+                .orElseThrow(() -> new RuntimeException("Emplacement non trouve avec ID: " + emplacementId));
 
         return stockRepository.findByEmplacementId(emplacementId).stream()
                 .map(this::convertToDto)
@@ -307,16 +341,19 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
+
     @Transactional
     public StockSecDto assignerEmplacement(UUID stockId, UUID emplacementId) {
         StockSec stock = getStockEntityById(stockId);
         EmplacementStock emplacement = emplacementRepository.findById(emplacementId)
-                .orElseThrow(() -> new RuntimeException("Emplacement non trouvé"));
+                .orElseThrow(() -> new RuntimeException("Emplacement non trouve"));
 
-        // Validation de la catégorie
         validateEmplacementCategorie(stock, emplacement);
+        validateEmplacementAssignable(stock, emplacement);
 
         stock.setEmplacement(emplacement);
+        emplacement.setDisponible(false);
+        emplacementRepository.save(emplacement);
         StockSec updatedStock = stockRepository.save(stock);
         return convertToDto(updatedStock);
     }
@@ -324,27 +361,56 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
     @Transactional
     public StockSecDto transfererEmplacement(UUID stockId, UUID nouvelEmplacementId) {
         StockSec stock = getStockEntityById(stockId);
+        EmplacementStock ancienEmplacement = stock.getEmplacement();
         EmplacementStock nouvelEmplacement = emplacementRepository.findById(nouvelEmplacementId)
-                .orElseThrow(() -> new RuntimeException("Emplacement non trouvé"));
+                .orElseThrow(() -> new RuntimeException("Emplacement non trouve"));
 
-        // Validation de la catégorie
         validateEmplacementCategorie(stock, nouvelEmplacement);
+        validateEmplacementAssignable(stock, nouvelEmplacement);
 
         stock.setEmplacement(nouvelEmplacement);
+        nouvelEmplacement.setDisponible(false);
+        emplacementRepository.save(nouvelEmplacement);
+
+        if (ancienEmplacement != null && !Objects.equals(ancienEmplacement.getId(), nouvelEmplacement.getId())) {
+            ancienEmplacement.setDisponible(true);
+            emplacementRepository.save(ancienEmplacement);
+        }
+
         StockSec updatedStock = stockRepository.save(stock);
         return convertToDto(updatedStock);
+    }
+
+    private void validateEmplacementAssignable(StockSec stock, EmplacementStock emplacement) {
+        if (!Boolean.TRUE.equals(emplacement.getActif())) {
+            throw new RuntimeException("Emplacement inactif: assignation impossible");
+        }
+
+        if (!Boolean.TRUE.equals(emplacement.getDisponible())) {
+            if (stock.getEmplacement() == null || !Objects.equals(stock.getEmplacement().getId(), emplacement.getId())) {
+                throw new RuntimeException("Emplacement non disponible");
+            }
+        }
+
+        List<StockSec> occupants = stockRepository.findByEmplacementId(emplacement.getId());
+        boolean occupiedByAnotherStock = occupants.stream()
+                .anyMatch(s -> s.getId() != null && !s.getId().equals(stock.getId()));
+
+        if (occupiedByAnotherStock) {
+            throw new RuntimeException("Emplacement deja assigne a un autre stock");
+        }
     }
 
     private void validateEmplacementCategorie(StockSec stock, EmplacementStock emplacement) {
         if (emplacement.getCategorieArticleStocke() != null) {
             ArticleSec article = stock.getArticle();
             if (article == null) {
-                throw new RuntimeException("Le stock n'a pas d'article associé");
+                throw new RuntimeException("Le stock n'a pas d'article associe");
             }
             if (!article.getCategorie().equals(emplacement.getCategorieArticleStocke())) {
                 throw new RuntimeException(
-                        String.format("L'emplacement '%s' accepte uniquement les articles de catégorie '%s', " +
-                                        "mais l'article est de catégorie '%s'",
+                        String.format("L'emplacement '%s' accepte uniquement les articles de categorie '%s', " +
+                                        "mais l'article est de categorie '%s'",
                                 emplacement.getNom() != null ? emplacement.getNom() : emplacement.getCode(),
                                 emplacement.getCategorieArticleStocke(),
                                 article.getCategorie())
@@ -356,8 +422,19 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
     @Transactional
     public StockSecDto retirerEmplacement(UUID stockId) {
         StockSec stock = getStockEntityById(stockId);
+        EmplacementStock current = stock.getEmplacement();
         stock.setEmplacement(null);
         StockSec updatedStock = stockRepository.save(stock);
+
+        if (current != null) {
+            List<StockSec> remaining = stockRepository.findByEmplacementId(current.getId());
+            boolean stillUsed = remaining.stream().anyMatch(s -> !s.getId().equals(stockId));
+            if (!stillUsed) {
+                current.setDisponible(true);
+                emplacementRepository.save(current);
+            }
+        }
+
         return convertToDto(updatedStock);
     }
 
@@ -375,15 +452,23 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
         created.setArticle(article);
         created.setQuantiteActuelle(0);
         created.setQuantiteReservee(0);
-        return convertToDto(stockRepository.save(created));
+        return convertToDto(saveWithValidation(created, "get-or-create"));
     }
 
     @Override
-    public Set<Action> actionsMapping(StockSec StockSec) {
+    public Set<Action> actionsMapping(StockSec stockSec) {
         Set<Action> actions = new HashSet<>();
-        actions.addAll(Set.of(Action.UPDATE, Action.DELETE, Action.READ,Action.CREATE,Action.ENTREE_STOCK,Action.SORTIE_STOCK,Action.ASSIGN_EMPLACEMENT,Action.LIBERER_STOCK,Action.RESERVER_STOCK));
+        actions.addAll(Set.of(
+                Action.UPDATE,
+                Action.DELETE,
+                Action.READ,
+                Action.CREATE,
+                Action.ENTREE_STOCK,
+                Action.SORTIE_STOCK,
+                Action.ASSIGN_EMPLACEMENT,
+                Action.LIBERER_STOCK,
+                Action.RESERVER_STOCK
+        ));
         return actions;
     }
-
-
 }
