@@ -1,34 +1,53 @@
- package com.osm.inventory_service.controller;
+package com.osm.inventory_service.controller;
 
+import com.osm.inventory_service.dto.ArticleCritiqueDto;
+import com.osm.inventory_service.dto.MouvementRecentDto;
 import com.osm.inventory_service.dto.StatistiquesDTO;
+import com.osm.inventory_service.dto.StockDashboardPayloadDto;
 import com.osm.inventory_service.service.StatistiqueService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/inventaire/statistiques")
-@CrossOrigin(origins = "*")
 public class StatistiqueController {
 
-    @Autowired
-    private StatistiqueService statistiqueService;
+    private final StatistiqueService statistiqueService;
+
+    public StatistiqueController(StatistiqueService statistiqueService) {
+        this.statistiqueService = statistiqueService;
+    }
+
+    /**
+     * Agrégat utilisé par le tableau de bord Angular (stats + listes).
+     */
+    @GetMapping("/dashboard/payload")
+    public ResponseEntity<StockDashboardPayloadDto> getDashboardPayload(
+            @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(statistiqueService.getDashboardPayload(limit));
+    }
 
     @GetMapping("/dashboard")
-    public StatistiquesDTO getDashboard() {
-        return statistiqueService.getStatistiquesCompletes();
+    public ResponseEntity<StatistiquesDTO> getDashboard() {
+        return ResponseEntity.ok(statistiqueService.getStatistiquesCompletes());
     }
 
     @GetMapping("/articles/critiques")
-    public List<Map<String, Object>> getArticlesCritiques() {
-        return statistiqueService.getArticlesCritiques();
+    public ResponseEntity<List<ArticleCritiqueDto>> getArticlesCritiques() {
+        return ResponseEntity.ok(statistiqueService.getArticlesCritiques());
     }
 
     @GetMapping("/mouvements/recents")
-    public List<Map<String, Object>> getMouvementsRecents(@RequestParam(defaultValue = "10") int limit) {
-        return statistiqueService.getMouvementsRecents(limit);
+    public ResponseEntity<List<MouvementRecentDto>> getMouvementsRecents(
+            @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(statistiqueService.getMouvementsRecents(limit));
     }
 
     @GetMapping("/stock/taux-rupture")
