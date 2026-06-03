@@ -5,6 +5,7 @@ import com.osm.inventory_service.dto.ArticleSecDto;
 import com.osm.inventory_service.entity.ArticleSec;
 import com.osm.inventory_service.service.ArticleSecService;
 import com.xdev.xdevbase.controllers.impl.BaseControllerImpl;
+import com.xdev.xdevbase.models.UniteMesure;
 import com.xdev.xdevbase.qr.model.QrResolveResponse;
 import com.xdev.xdevbase.services.BaseService;
 import jakarta.persistence.EntityNotFoundException;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Arrays;
 
 @RestController
 @RequestMapping("/api/inventaire/articles")
@@ -58,6 +60,27 @@ public class ArticleSecController extends BaseControllerImpl<ArticleSec, Article
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
         }
+    }
+
+    @GetMapping("/unites-mesure")
+    public ResponseEntity<List<Map<String, String>>> getUnitesMesure() {
+        List<Map<String, String>> unites = Arrays.stream(UniteMesure.values())
+                .map(unite -> Map.of(
+                        "value", unite.name(),
+                        "label", formatUniteMesureLabel(unite)
+                ))
+                .toList();
+
+        return ResponseEntity.ok(unites);
+    }
+
+    private String formatUniteMesureLabel(UniteMesure unite) {
+        return switch (unite) {
+            case KG -> "Kilogramme (KG)";
+            case LITRE -> "Litre";
+            case UNITE -> "Unite";
+            case METRE -> "Metre";
+        };
     }
 
     @GetMapping("/{id}")

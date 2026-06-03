@@ -1,9 +1,14 @@
 package com.osm.inventory_service.service;
 
+import com.osm.inventory_service.Enum.CategorieArticle;
+import com.osm.inventory_service.config.ColisConfig;
+import com.osm.inventory_service.config.PaletteConfig;
 import com.osm.inventory_service.dto.MaterialNeedLineDto;
+import com.osm.inventory_service.entity.ArticleSec;
 import com.osm.inventory_service.entity.BomLine;
 import com.osm.inventory_service.entity.StockSec;
 import com.osm.inventory_service.exception.ResourceNotFoundException;
+import com.osm.inventory_service.repository.ArticleSecRepository;
 import com.osm.inventory_service.repository.BomRepository;
 import com.osm.inventory_service.repository.StockSecRepository;
 import org.springframework.stereotype.Service;
@@ -18,10 +23,16 @@ public class MaterialNeedsService {
 
     private final BomRepository bomRepository;
     private final StockSecRepository stockRepository;
+    private final ArticleSecRepository articleRepository;
 
-    public MaterialNeedsService(BomRepository bomRepository, StockSecRepository stockRepository) {
+    public MaterialNeedsService(
+            BomRepository bomRepository,
+            StockSecRepository stockRepository,
+            ArticleSecRepository articleRepository
+    ) {
         this.bomRepository = bomRepository;
         this.stockRepository = stockRepository;
+        this.articleRepository = articleRepository;
     }
 
     @Transactional(readOnly = true)
@@ -43,7 +54,7 @@ public class MaterialNeedsService {
                 continue;
             }
             UUID articleId = line.getArticle().getId();
-            double needed = line.getQuantity() * productionQuantity;
+            double needed = calculateNeededQuantity(line, productionQuantity);
             int neededRounded = (int) Math.ceil(needed - 1e-9);
 
             MaterialNeedLineDto dto = new MaterialNeedLineDto();
@@ -64,6 +75,48 @@ public class MaterialNeedsService {
             lines.add(dto);
         }
         return lines;
+    }
+
+    private double calculateNeededQuantity(BomLine line, double productionQuantity) {
+        ArticleSec article = line.getArticle();
+        double rawNeed = line.getQuantity() * productionQuantity;
+
+        if (article == null || article.getCategorie() == null || article.getConfiguration() == null) {
+            return rawNeed;
+        }
+
+        if (article.getCategorie() == CategorieArticle.COLIS && article.getConfiguration() instanceof ColisConfig colisConfig) {
+            int unitsPerColis = colisConfig.getUnitsPerColis();
+            if (unitsPerColis > 0) {
+                return Math.ceil((productionQuantity / unitsPerColis) * line.getQuantity());
+            }
+        }
+
+        if (article.getCategorie() == CategorieArticle.PALETTE && article.getConfiguration() instanceof PaletteConfig paletteConfig) {
+            int unitsPerPalette = calculateUnitsPerPalette(paletteConfig);
+            if (unitsPerPalette > 0) {
+                return Math.ceil((productionQuantity / unitsPerPalette) * line.getQuantity());
+            }
+        }
+
+        return rawNeed;
+    }
+
+    private int calculateUnitsPerPalette(PaletteConfig paletteConfig) {
+        if (paletteConfig.getColisId() == null || paletteConfig.getColisPerLayer() <= 0 || paletteConfig.getNumberOfLayers() <= 0) {
+            return 0;
+        }
+
+        int colisPerPalette = paletteConfig.getColisPerLayer() * paletteConfig.getNumberOfLayers();
+
+        return articleRepository.findById(paletteConfig.getColisId())
+                .map(ArticleSec::getConfiguration)
+                .filter(ColisConfig.class::isInstance)
+                .map(ColisConfig.class::cast)
+                .map(ColisConfig::getUnitsPerColis)
+                .filter(unitsPerColis -> unitsPerColis > 0)
+                .map(unitsPerColis -> unitsPerColis * colisPerPalette)
+                .orElse(0);
     }
 
     private void fillStock(MaterialNeedLineDto dto, StockSec stock) {
