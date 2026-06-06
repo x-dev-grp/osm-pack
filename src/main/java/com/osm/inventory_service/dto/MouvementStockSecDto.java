@@ -24,6 +24,7 @@ public class MouvementStockSecDto  extends BaseDto<MouvementStockSec> implements
     String lastModifiedBy;
     LocalDateTime lastModifiedDate;
     UUID externalId;
+    UUID articleId;
     ArticleSecDto article;
     Integer quantite;
     TypeMouvement typeMouvement;

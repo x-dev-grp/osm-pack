@@ -23,6 +23,4 @@ public interface StockSecRepository extends BaseRepository<StockSec> {
     @Query("SELECT s FROM StockSec s WHERE s.emplacement.disponible = true")
     List<StockSec> findByEmplacementDisponible();
 
-
-
 }

@@ -87,7 +87,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
 
         if (stock.getArticle() != null) {
             dto.setArticleId(stock.getArticle().getId());
-            dto.setArticle(articleSecService.getArticleById(stock.getArticle().getId()));
+            dto.setArticle(articleSecService.toArticleDto(stock.getArticle()));
         }
 
         if (stock.getEmplacement() != null) {
@@ -214,7 +214,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
     }
 
     public StockSecDto getStockByArticle(UUID articleId) {
-        articleSecService.getArticleById(articleId);
+        ArticleSec article = articleSecService.getArticleEntityById(articleId);
         StockSec stock = stockRepository.findByArticleId(articleId)
                 .orElseThrow(() -> new RuntimeException("Aucun stock trouve pour l'article ID: " + articleId));
         return convertToDto(stock);
@@ -291,19 +291,20 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
 
     @Transactional(readOnly = true)
     public List<ArticleStockSummaryDto> getAllStockSummaries() {
-        return stockRepository.findAll().stream().map(stock -> {
-            ArticleStockSummaryDto summary = new ArticleStockSummaryDto();
-            if (stock.getArticle() != null) {
-                summary.setArticleId(stock.getArticle().getId());
-                int minimum = stock.getArticle().getStockMinimum() != null ? stock.getArticle().getStockMinimum() : 0;
-                int actuelle = safe(stock.getQuantiteActuelle());
-                summary.setBelowMinimum(actuelle <= minimum);
-            }
-            summary.setQuantiteActuelle(safe(stock.getQuantiteActuelle()));
-            summary.setQuantiteReservee(safe(stock.getQuantiteReservee()));
-            summary.setQuantiteDisponible(safe(stock.getQuantiteActuelle()) - safe(stock.getQuantiteReservee()));
-            return summary;
-        }).collect(Collectors.toList());
+        return stockRepository.findAllByIsDeletedFalse().stream()
+                .filter(stock -> stock.getArticle() != null && stock.getArticle().getId() != null)
+                .map(stock -> {
+                    ArticleStockSummaryDto summary = new ArticleStockSummaryDto();
+                    summary.setArticleId(stock.getArticle().getId());
+                    int minimum = stock.getArticle().getStockMinimum() != null ? stock.getArticle().getStockMinimum() : 0;
+                    int actuelle = safe(stock.getQuantiteActuelle());
+                    summary.setBelowMinimum(minimum > 0 && actuelle <= minimum);
+                    summary.setQuantiteActuelle(actuelle);
+                    summary.setQuantiteReservee(safe(stock.getQuantiteReservee()));
+                    summary.setQuantiteDisponible(actuelle - safe(stock.getQuantiteReservee()));
+                    return summary;
+                })
+                .collect(Collectors.toList());
     }
 
     private void recordMouvement(
@@ -362,12 +363,29 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
                 .map(mouvement -> modelMapper.map(mouvement, MouvementStockSecDto.class))
                 .collect(Collectors.toList());
     }
-
+@Transactional(readOnly = true)
     public List<MouvementStockSecDto> getMouvementsByArticleDto(UUID articleId) {
-        articleSecService.getArticleById(articleId);
-        return mouvementStockSecRepository.findByArticleId(articleId).stream()
-                .map(mouvement -> modelMapper.map(mouvement, MouvementStockSecDto.class))
+        return mouvementStockSecRepository.findByArticleIdNotDeletedOrderByDateMouvementDesc(articleId).stream()
+                .map(mouvement -> toArticleMovementDto(mouvement, articleId))
                 .collect(Collectors.toList());
+    }
+
+    private MouvementStockSecDto toArticleMovementDto(MouvementStockSec mouvement, UUID articleId) {
+        MouvementStockSecDto dto = new MouvementStockSecDto();
+        dto.setId(mouvement.getId());
+        dto.setTenantId(mouvement.getTenantId());
+        dto.setDeleted(mouvement.getDeleted());
+        dto.setCreatedBy(mouvement.getCreatedBy());
+        dto.setCreatedDate(mouvement.getCreatedDate());
+        dto.setLastModifiedBy(mouvement.getLastModifiedBy());
+        dto.setLastModifiedDate(mouvement.getLastModifiedDate());
+        dto.setExternalId(mouvement.getExternalId());
+        dto.setArticleId(articleId);
+        dto.setQuantite(mouvement.getQuantite());
+        dto.setTypeMouvement(mouvement.getTypeMouvement());
+        dto.setMotif(mouvement.getMotif());
+        dto.setDateMouvement(mouvement.getDateMouvement());
+        return dto;
     }
 
     public List<StockSecDto> getStocksByEmplacement(UUID emplacementId) {
@@ -492,20 +510,21 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
     }
 
     @Transactional
+    public StockSec ensureStockEntity(ArticleSec article) {
+        return stockRepository.findByArticleId(article.getId())
+                .orElseGet(() -> {
+                    StockSec created = new StockSec();
+                    created.setArticle(article);
+                    created.setQuantiteActuelle(0);
+                    created.setQuantiteReservee(0);
+                    return saveWithValidation(created, "get-or-create");
+                });
+    }
+
+    @Transactional
     public StockSecDto getOrCreateStockByArticle(UUID articleId) {
-        articleSecService.getArticleById(articleId);
-
-        Optional<StockSec> existing = stockRepository.findByArticleId(articleId);
-        if (existing.isPresent()) {
-            return convertToDto(existing.get());
-        }
-
         ArticleSec article = articleSecService.getArticleEntityById(articleId);
-        StockSec created = new StockSec();
-        created.setArticle(article);
-        created.setQuantiteActuelle(0);
-        created.setQuantiteReservee(0);
-        return convertToDto(saveWithValidation(created, "get-or-create"));
+        return convertToDto(ensureStockEntity(article));
     }
 
     @Override
