@@ -5,7 +5,9 @@ import com.osm.inventory_service.dto.LigneConditionnementDto;
 import com.osm.inventory_service.entity.LigneConditionnement;
 import com.osm.inventory_service.service.LigneConditionnementService;
 import com.xdev.xdevbase.controllers.impl.BaseControllerImpl;
+import com.xdev.xdevbase.qr.model.QrResolveResponse;
 import com.xdev.xdevbase.services.BaseService;
+import jakarta.persistence.EntityNotFoundException;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -126,6 +128,12 @@ public class LigneConditionnementController extends BaseControllerImpl<LigneCond
 
     @Override
     public ResponseEntity<?> resolve(String publicCode) {
-        return null;
+        try {
+            QrResolveResponse response = getBaseService().resolve(publicCode);
+            return ResponseEntity.ok(response);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 }

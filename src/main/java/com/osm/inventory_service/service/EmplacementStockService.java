@@ -3,14 +3,20 @@ package com.osm.inventory_service.service;
 import com.osm.inventory_service.dto.EmplacementStockDto;
 import com.osm.inventory_service.entity.EmplacementStock;
 import com.osm.inventory_service.repository.EmplacementStockRepository;
+import com.xdev.xdevbase.config.TenantContext;
+import com.xdev.xdevbase.qr.model.QrCodeInfo;
+import com.xdev.xdevbase.qr.model.QrResolveResponse;
 import com.xdev.xdevbase.repos.BaseRepository;
 import com.xdev.xdevbase.services.impl.BaseServiceImpl;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ValidationException;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -30,18 +36,20 @@ public class EmplacementStockService extends BaseServiceImpl<EmplacementStock, E
     }
     public List<EmplacementStockDto> getAllEmplacements() {
         return emplacementRepository.findAll().stream()
-                .map(emp -> modelMapper.map(emp, EmplacementStockDto.class))
+                .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
+
+    @Transactional(readOnly = true)
     public EmplacementStockDto getEmplacementById(UUID id) {
         EmplacementStock emplacement = emplacementRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Emplacement non trouvé avec id: " + id));
-        return modelMapper.map(emplacement, EmplacementStockDto.class);
+        return convertToDto(emplacement);
     }
 
     public List<EmplacementStockDto> getEmplacementsReservesPour(String client) {
         return emplacementRepository.findReservesPour(client).stream()
-                .map(emp -> modelMapper.map(emp, EmplacementStockDto.class))
+                .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
@@ -87,7 +95,12 @@ public class EmplacementStockService extends BaseServiceImpl<EmplacementStock, E
                 savedEmplacement.getTypeEmplacement(),
                 savedEmplacement.getCategorieArticleStocke());
 
-        return modelMapper.map(savedEmplacement, EmplacementStockDto.class);
+        QrCodeInfo qrInfo = generateQrInfo("EMPLACEMENTSTOCK", savedEmplacement.getId());
+        EmplacementStockDto result = convertToDto(savedEmplacement);
+        result.setPublicCode(qrInfo.getPublicCode());
+        result.setQrUrl(qrInfo.getQrUrl());
+        result.setQrImageBase64(qrInfo.getQrImageBase64());
+        return result;
     }
     @Transactional
     public EmplacementStockDto activerEmplacement(UUID id) {
@@ -95,7 +108,7 @@ public class EmplacementStockService extends BaseServiceImpl<EmplacementStock, E
                 .orElseThrow(() -> new RuntimeException("Emplacement non trouvé avec id: " + id));
         emplacement.setActif(true);
         EmplacementStock updated = emplacementRepository.save(emplacement);
-        return modelMapper.map(updated, EmplacementStockDto.class);
+        return convertToDto(updated);
     }
     @Transactional
     public EmplacementStockDto desactiverEmplacement(UUID id) {
@@ -103,7 +116,7 @@ public class EmplacementStockService extends BaseServiceImpl<EmplacementStock, E
                 .orElseThrow(() -> new RuntimeException("Emplacement non trouvé avec id: " + id));
         emplacement.setActif(false);
         EmplacementStock updated = emplacementRepository.save(emplacement);
-        return modelMapper.map(updated, EmplacementStockDto.class);
+        return convertToDto(updated);
     }
 
     @Transactional
@@ -132,7 +145,7 @@ public class EmplacementStockService extends BaseServiceImpl<EmplacementStock, E
         existingEmplacement.setNotes(emplacementDto.getNotes());
 
         EmplacementStock updatedEmplacement = emplacementRepository.save(existingEmplacement);
-        return modelMapper.map(updatedEmplacement, EmplacementStockDto.class);
+        return convertToDto(updatedEmplacement);
     }
     @Transactional
     public EmplacementStockDto reserverEmplacement(UUID id, String reservePour) {
@@ -143,7 +156,7 @@ public class EmplacementStockService extends BaseServiceImpl<EmplacementStock, E
         emplacement.setReservePour(reservePour);
 
         EmplacementStock updatedEmplacement = emplacementRepository.save(emplacement);
-        return modelMapper.map(updatedEmplacement, EmplacementStockDto.class);
+        return convertToDto(updatedEmplacement);
     }
 
     @Transactional
@@ -156,7 +169,7 @@ public class EmplacementStockService extends BaseServiceImpl<EmplacementStock, E
         emplacement.setCapaciteActuelle("0");
 
         EmplacementStock updatedEmplacement = emplacementRepository.save(emplacement);
-        return modelMapper.map(updatedEmplacement, EmplacementStockDto.class);
+        return convertToDto(updatedEmplacement);
     }
 
     @Transactional
@@ -167,7 +180,7 @@ public class EmplacementStockService extends BaseServiceImpl<EmplacementStock, E
         emplacement.setCapaciteActuelle(nouvelleCapacite);
 
         EmplacementStock updatedEmplacement = emplacementRepository.save(emplacement);
-        return modelMapper.map(updatedEmplacement, EmplacementStockDto.class);
+        return convertToDto(updatedEmplacement);
     }
 
     @Transactional
@@ -180,5 +193,87 @@ public class EmplacementStockService extends BaseServiceImpl<EmplacementStock, E
         return generateBusinessCode("code", "EM");
     }
 
+    private EmplacementStockDto convertToDto(EmplacementStock emplacement) {
+        EmplacementStockDto dto = modelMapper.map(emplacement, EmplacementStockDto.class);
+        dto.setPublicCode(emplacement.getQrHex());
+        dto.setQrImageBase64(emplacement.getQrImageBase64());
+        return dto;
+    }
 
+    @Override
+    protected String getEntityType() {
+        return "EMPLACEMENTSTOCK";
+    }
+
+    @Override
+    protected String getLabel(EmplacementStock entity) {
+        if (entity.getNom() != null && !entity.getNom().isBlank()) {
+            return entity.getNom();
+        }
+        return entity.getCode();
+    }
+
+    @Override
+    protected String getStatus(EmplacementStock entity) {
+        if (Boolean.FALSE.equals(entity.getActif())) {
+            return "INACTIF";
+        }
+        return Boolean.TRUE.equals(entity.getDisponible()) ? "DISPONIBLE" : "RESERVE";
+    }
+
+    @Override
+    protected String getMobileRoute() {
+        return "/emplacement/detail";
+    }
+
+    @Override
+    protected String getWebRoute(EmplacementStock entity) {
+        if (entity == null || entity.getId() == null) {
+            return "/stock/emplacements";
+        }
+        return "/stock/emplacements/" + entity.getId();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public QrResolveResponse resolve(String publicCode) {
+        if (publicCode == null || publicCode.isBlank()) {
+            throw new IllegalArgumentException("Le code est obligatoire");
+        }
+
+        String normalizedCode = publicCode.trim().toUpperCase(Locale.ROOT);
+        UUID tenantId = TenantContext.getCurrentTenant();
+
+        Optional<EmplacementStock> entity = (tenantId == null)
+                ? emplacementRepository.findByQrHex(normalizedCode)
+                : emplacementRepository.findByQrHexAndTenantIdAndIsDeletedFalse(normalizedCode, tenantId);
+
+        if (entity.isEmpty() && tenantId != null) {
+            entity = emplacementRepository.findByQrHex(normalizedCode);
+        }
+
+        return entity.map(emplacement -> {
+                    QrResolveResponse response = new QrResolveResponse();
+                    response.setEntityType(getEntityType());
+                    response.setPublicCode(normalizedCode);
+                    response.setEntityId(emplacement.getId().toString());
+                    response.setLabel(getLabel(emplacement));
+                    response.setStatus(getStatus(emplacement));
+                    response.setMobileRoute(getMobileRoute());
+                    response.setWebRoute(getWebRoute(emplacement));
+                    response.setData(convertToDto(emplacement));
+                    return response;
+                })
+                .orElseThrow(() -> new EntityNotFoundException("Emplacement non trouve pour le code : " + publicCode));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<QrResolveResponse> searchByCode(String code) {
+        try {
+            return Optional.ofNullable(resolve(code));
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
 }

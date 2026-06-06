@@ -31,4 +31,7 @@ public class EmplacementStockDto extends BaseDto<EmplacementStock> implements Se
     private String notes;
     private Boolean actif = true;
     private CategorieArticle categorieArticleStocke;
+    private String publicCode;
+    private String qrUrl;
+    private String qrImageBase64;
 }

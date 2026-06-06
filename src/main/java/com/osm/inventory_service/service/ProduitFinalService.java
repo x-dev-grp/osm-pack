@@ -4,9 +4,13 @@ import com.osm.inventory_service.dto.ProduitFinalDto;
 import com.osm.inventory_service.entity.ProduitFinal;
 import com.osm.inventory_service.Enum.ProduitFinalType;
 import com.osm.inventory_service.repository.ProduitFinalRepository;
+import com.xdev.xdevbase.config.TenantContext;
+import com.xdev.xdevbase.qr.model.QrCodeInfo;
+import com.xdev.xdevbase.qr.model.QrResolveResponse;
 import com.xdev.xdevbase.repos.BaseRepository;
 import com.xdev.xdevbase.services.impl.BaseServiceImpl;
 import com.xdev.xdevbase.utils.CampaignResolver;
+import jakarta.persistence.EntityNotFoundException;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -14,7 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -35,25 +41,26 @@ public class ProduitFinalService extends BaseServiceImpl<ProduitFinal, ProduitFi
 
     public List<ProduitFinalDto> getAllProduitsFinaux() {
         return produitFinalRepository.findByIsDeletedFalse().stream()
-                .map(produitFinal -> modelMapper.map(produitFinal, ProduitFinalDto.class))
+                .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public ProduitFinalDto getProduitFinalById(UUID id) {
         ProduitFinal produitFinal = produitFinalRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Produit non trouve avec id: " + id));
-        return modelMapper.map(produitFinal, ProduitFinalDto.class);
+        return convertToDto(produitFinal);
     }
 
     public List<ProduitFinalDto> getAllActiveProduitsFinaux() {
         return produitFinalRepository.findByActifTrueAndIsDeletedFalse().stream()
-                .map(produitFinal -> modelMapper.map(produitFinal, ProduitFinalDto.class))
+                .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
     public List<ProduitFinalDto> getProduitsFinauxByType(ProduitFinalType type) {
         return produitFinalRepository.findByTypeAndIsDeletedFalse(type).stream()
-                .map(produitFinal -> modelMapper.map(produitFinal, ProduitFinalDto.class))
+                .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
@@ -68,7 +75,12 @@ public class ProduitFinalService extends BaseServiceImpl<ProduitFinal, ProduitFi
         applyProduitFinalDto(produitFinal, produitFinalDto, name, code);
         produitFinal.setDeleted(false);
         ProduitFinal savedProduitFinal = produitFinalRepository.save(produitFinal);
-        return modelMapper.map(savedProduitFinal, ProduitFinalDto.class);
+        QrCodeInfo qrInfo = generateQrInfo("PRODUITFINAL", savedProduitFinal.getId());
+        ProduitFinalDto result = convertToDto(savedProduitFinal);
+        result.setPublicCode(qrInfo.getPublicCode());
+        result.setQrUrl(qrInfo.getQrUrl());
+        result.setQrImageBase64(qrInfo.getQrImageBase64());
+        return result;
     }
 
     @Transactional
@@ -82,7 +94,7 @@ public class ProduitFinalService extends BaseServiceImpl<ProduitFinal, ProduitFi
         applyProduitFinalDto(existingProduitFinal, produitFinalDto, name, code);
 
         ProduitFinal updatedProduitFinal = produitFinalRepository.save(existingProduitFinal);
-        return modelMapper.map(updatedProduitFinal, ProduitFinalDto.class);
+        return convertToDto(updatedProduitFinal);
     }
 
     @Transactional
@@ -205,5 +217,86 @@ public class ProduitFinalService extends BaseServiceImpl<ProduitFinal, ProduitFi
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private ProduitFinalDto convertToDto(ProduitFinal produitFinal) {
+        ProduitFinalDto dto = modelMapper.map(produitFinal, ProduitFinalDto.class);
+        dto.setPublicCode(produitFinal.getQrHex());
+        dto.setQrImageBase64(produitFinal.getQrImageBase64());
+        return dto;
+    }
+
+    @Override
+    protected String getEntityType() {
+        return "PRODUITFINAL";
+    }
+
+    @Override
+    protected String getLabel(ProduitFinal entity) {
+        if (entity.getName() != null && !entity.getName().isBlank()) {
+            return entity.getName();
+        }
+        return entity.getCode();
+    }
+
+    @Override
+    protected String getStatus(ProduitFinal entity) {
+        return Boolean.TRUE.equals(entity.getActif()) ? "ACTIF" : "INACTIF";
+    }
+
+    @Override
+    protected String getMobileRoute() {
+        return "/produit-final/detail";
+    }
+
+    @Override
+    protected String getWebRoute(ProduitFinal entity) {
+        if (entity == null || entity.getId() == null) {
+            return "/stock/products";
+        }
+        return "/stock/products/" + entity.getId();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public QrResolveResponse resolve(String publicCode) {
+        if (publicCode == null || publicCode.isBlank()) {
+            throw new IllegalArgumentException("Le code est obligatoire");
+        }
+
+        String normalizedCode = publicCode.trim().toUpperCase(Locale.ROOT);
+        UUID tenantId = TenantContext.getCurrentTenant();
+
+        Optional<ProduitFinal> entity = (tenantId == null)
+                ? produitFinalRepository.findByQrHex(normalizedCode)
+                : produitFinalRepository.findByQrHexAndTenantIdAndIsDeletedFalse(normalizedCode, tenantId);
+
+        if (entity.isEmpty() && tenantId != null) {
+            entity = produitFinalRepository.findByQrHex(normalizedCode);
+        }
+
+        return entity.map(produitFinal -> {
+                    QrResolveResponse response = new QrResolveResponse();
+                    response.setEntityType(getEntityType());
+                    response.setPublicCode(normalizedCode);
+                    response.setEntityId(produitFinal.getId().toString());
+                    response.setLabel(getLabel(produitFinal));
+                    response.setStatus(getStatus(produitFinal));
+                    response.setMobileRoute(getMobileRoute());
+                    response.setWebRoute(getWebRoute(produitFinal));
+                    response.setData(convertToDto(produitFinal));
+                    return response;
+                })
+                .orElseThrow(() -> new EntityNotFoundException("Produit final non trouve pour le code : " + publicCode));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<QrResolveResponse> searchByCode(String code) {
+        try {
+            return Optional.ofNullable(resolve(code));
+        } catch (Exception e) {
+            return Optional.empty();
+        }
     }
 }

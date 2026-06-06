@@ -28,4 +28,7 @@ public class LigneConditionnementDto extends BaseDto<LigneConditionnement> imple
     private Date dateProchaineMaintenance;
     private String notes;
     private  boolean actif;
+    private String publicCode;
+    private String qrUrl;
+    private String qrImageBase64;
 }

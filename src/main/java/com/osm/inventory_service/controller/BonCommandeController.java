@@ -6,7 +6,9 @@ import com.osm.inventory_service.entity.BonCommande;
 import com.osm.inventory_service.service.BonCommandeService;
 import com.xdev.xdevbase.apiDTOs.ApiResponse;
 import com.xdev.xdevbase.controllers.impl.BaseControllerImpl;
+import com.xdev.xdevbase.qr.model.QrResolveResponse;
 import com.xdev.xdevbase.services.BaseService;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import jakarta.validation.ValidationException;
 import jakarta.ws.rs.BadRequestException;
@@ -179,6 +181,12 @@ public class BonCommandeController extends BaseControllerImpl<BonCommande, BonCo
 
     @Override
     public ResponseEntity<?> resolve(String publicCode) {
-        return null;
+        try {
+            QrResolveResponse response = getBaseService().resolve(publicCode);
+            return ResponseEntity.ok(response);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 }

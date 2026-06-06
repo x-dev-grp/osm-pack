@@ -11,9 +11,13 @@ import com.osm.inventory_service.entity.BonCommande;
 import com.osm.inventory_service.entity.LigneBonCommande;
 import com.osm.inventory_service.repository.BonCommandeRepository;
 import com.osm.inventory_service.repository.LigneBonCommandeRepository;
+import com.xdev.xdevbase.config.TenantContext;
+import com.xdev.xdevbase.qr.model.QrCodeInfo;
+import com.xdev.xdevbase.qr.model.QrResolveResponse;
 import com.xdev.xdevbase.qr.CodeGenerator;
 import com.xdev.xdevbase.repos.BaseRepository;
 import com.xdev.xdevbase.services.impl.BaseServiceImpl;
+import jakarta.persistence.EntityNotFoundException;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,7 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -44,7 +50,7 @@ public class BonCommandeService extends BaseServiceImpl<BonCommande, BonCommande
                               StockSecService stockSecService,
                               CodeGenerator codeGenerator,
                               ModelMapper modelMapper) {
-        super(repository, modelMapper);
+        super(repository, codeGenerator, modelMapper);
         this.bonCommandeRepository = bonCommandeRepository;
         this.ligneBonCommandeRepository = ligneBonCommandeRepository;
         this.articleSecService = articleSecService;
@@ -65,6 +71,8 @@ public class BonCommandeService extends BaseServiceImpl<BonCommande, BonCommande
         dto.setDateReceptionPrevue(bonCommande.getDateReceptionPrevue());
         dto.setStatus(bonCommande.getStatus());
         dto.setMotifRefus(bonCommande.getMotifRefus());
+        dto.setPublicCode(bonCommande.getQrHex());
+        dto.setQrImageBase64(bonCommande.getQrImageBase64());
 
         if (bonCommande.getLignes() != null && !bonCommande.getLignes().isEmpty()) {
             List<LigneBonCommandeDto> lignesDto = bonCommande.getLignes().stream()
@@ -148,7 +156,12 @@ public class BonCommandeService extends BaseServiceImpl<BonCommande, BonCommande
         }
         bonCommande.setLignes(lignes);
         BonCommande savedBon = bonCommandeRepository.save(bonCommande);
-        return convertToDto(savedBon);
+        QrCodeInfo qrInfo = generateQrInfo("BONCOMMANDE", savedBon.getId());
+        BonCommandeDto result = convertToDto(savedBon);
+        result.setPublicCode(qrInfo.getPublicCode());
+        result.setQrUrl(qrInfo.getQrUrl());
+        result.setQrImageBase64(qrInfo.getQrImageBase64());
+        return result;
     }
     @Transactional
     public BonCommandeDto validerBonCommande(UUID id) {
@@ -228,6 +241,85 @@ public class BonCommandeService extends BaseServiceImpl<BonCommande, BonCommande
         }
         BonCommande updated = bonCommandeRepository.save(bc);
         return convertToDto(updated);
+    }
+
+    @Override
+    protected String getEntityType() {
+        return "BONCOMMANDE";
+    }
+
+    @Override
+    protected String getLabel(BonCommande entity) {
+        if (entity.getNumeroBC() != null && !entity.getNumeroBC().isBlank()) {
+            return entity.getNumeroBC();
+        }
+        return "Bon de commande " + entity.getId();
+    }
+
+    @Override
+    protected String getStatus(BonCommande entity) {
+        return entity.getStatus() != null ? entity.getStatus().name() : "UNKNOWN";
+    }
+
+    @Override
+    protected String getMobileRoute() {
+        return "/bon-commande/detail";
+    }
+
+    @Override
+    protected String getWebRoute(BonCommande entity) {
+        if (entity == null || entity.getId() == null) {
+            return "/stock/bons-commande";
+        }
+        return "/stock/bons-commande/" + entity.getId();
+    }
+
+    @Override
+    protected Object getData(BonCommande entity) {
+        return convertToDto(entity);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public QrResolveResponse resolve(String publicCode) {
+        if (publicCode == null || publicCode.isBlank()) {
+            throw new IllegalArgumentException("Le code est obligatoire");
+        }
+
+        String normalizedCode = publicCode.trim().toUpperCase(Locale.ROOT);
+        UUID tenantId = TenantContext.getCurrentTenant();
+
+        Optional<BonCommande> entity = (tenantId == null)
+                ? bonCommandeRepository.findByQrHex(normalizedCode)
+                : bonCommandeRepository.findByQrHexAndTenantIdAndIsDeletedFalse(normalizedCode, tenantId);
+
+        if (entity.isEmpty() && tenantId != null) {
+            entity = bonCommandeRepository.findByQrHex(normalizedCode);
+        }
+
+        return entity.map(bon -> {
+                    QrResolveResponse response = new QrResolveResponse();
+                    response.setEntityType(getEntityType());
+                    response.setPublicCode(normalizedCode);
+                    response.setEntityId(bon.getId().toString());
+                    response.setLabel(getLabel(bon));
+                    response.setStatus(getStatus(bon));
+                    response.setMobileRoute(getMobileRoute());
+                    response.setWebRoute(getWebRoute(bon));
+                    response.setData(getData(bon));
+                    return response;
+                })
+                .orElseThrow(() -> new EntityNotFoundException("Bon de commande non trouve pour le code : " + publicCode));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<QrResolveResponse> searchByCode(String code) {
+        try {
+            return Optional.ofNullable(resolve(code));
+        } catch (Exception e) {
+            return Optional.empty();
+        }
     }
 
 }

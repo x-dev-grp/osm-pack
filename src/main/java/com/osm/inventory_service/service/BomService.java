@@ -12,9 +12,13 @@ import com.osm.inventory_service.entity.ProduitFinal;
 import com.osm.inventory_service.repository.ArticleSecRepository;
 import com.osm.inventory_service.repository.BomRepository;
 import com.osm.inventory_service.repository.ProduitFinalRepository;
+import com.xdev.xdevbase.config.TenantContext;
 import com.xdev.xdevbase.qr.CodeGenerator;
+import com.xdev.xdevbase.qr.model.QrCodeInfo;
+import com.xdev.xdevbase.qr.model.QrResolveResponse;
 import com.xdev.xdevbase.repos.BaseRepository;
 import com.xdev.xdevbase.services.impl.BaseServiceImpl;
+import jakarta.persistence.EntityNotFoundException;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,6 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -116,7 +122,12 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
         }
 
         BOM saved = bomRepository.save(bom);
-        return convertToDto(saved);
+        QrCodeInfo qrInfo = generateQrInfo("BOM", saved.getId());
+        BOMDto result = convertToDto(saved);
+        result.setPublicCode(qrInfo.getPublicCode());
+        result.setQrUrl(qrInfo.getQrUrl());
+        result.setQrImageBase64(qrInfo.getQrImageBase64());
+        return result;
     }
 
     @Transactional
@@ -230,6 +241,8 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
         }
         dto.setVersion(bom.getVersion());
         dto.setActive(bom.isActive());
+        dto.setPublicCode(bom.getQrHex());
+        dto.setQrImageBase64(bom.getQrImageBase64());
 
         List<BomLineDto> lineDtos = bom.getLines().stream().map(line -> {
             BomLineDto lineDto = new BomLineDto();
@@ -246,5 +259,82 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
         }).collect(Collectors.toList());
         dto.setLines(lineDtos);
         return dto;
+    }
+
+    @Override
+    protected String getEntityType() {
+        return "BOM";
+    }
+
+    @Override
+    protected String getLabel(BOM entity) {
+        String product = entity.getProduitFinal() != null ? entity.getProduitFinal().getName() : "Produit";
+        return product + " " + entity.getVersion();
+    }
+
+    @Override
+    protected String getStatus(BOM entity) {
+        return entity.isActive() ? "ACTIVE" : "INACTIVE";
+    }
+
+    @Override
+    protected String getMobileRoute() {
+        return "/bom/detail";
+    }
+
+    @Override
+    protected String getWebRoute(BOM entity) {
+        if (entity == null || entity.getId() == null) {
+            return "/stock/boms";
+        }
+        return "/stock/boms/" + entity.getId();
+    }
+
+    @Override
+    protected Object getData(BOM entity) {
+        return convertToDto(entity);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public QrResolveResponse resolve(String publicCode) {
+        if (publicCode == null || publicCode.isBlank()) {
+            throw new IllegalArgumentException("Le code est obligatoire");
+        }
+
+        String normalizedCode = publicCode.trim().toUpperCase(Locale.ROOT);
+        UUID tenantId = TenantContext.getCurrentTenant();
+
+        Optional<BOM> entity = (tenantId == null)
+                ? bomRepository.findByQrHex(normalizedCode)
+                : bomRepository.findByQrHexAndTenantIdAndIsDeletedFalse(normalizedCode, tenantId);
+
+        if (entity.isEmpty() && tenantId != null) {
+            entity = bomRepository.findByQrHex(normalizedCode);
+        }
+
+        return entity.map(bom -> {
+                    QrResolveResponse response = new QrResolveResponse();
+                    response.setEntityType(getEntityType());
+                    response.setPublicCode(normalizedCode);
+                    response.setEntityId(bom.getId().toString());
+                    response.setLabel(getLabel(bom));
+                    response.setStatus(getStatus(bom));
+                    response.setMobileRoute(getMobileRoute());
+                    response.setWebRoute(getWebRoute(bom));
+                    response.setData(getData(bom));
+                    return response;
+                })
+                .orElseThrow(() -> new EntityNotFoundException("BOM non trouvee pour le code : " + publicCode));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<QrResolveResponse> searchByCode(String code) {
+        try {
+            return Optional.ofNullable(resolve(code));
+        } catch (Exception e) {
+            return Optional.empty();
+        }
     }
 }

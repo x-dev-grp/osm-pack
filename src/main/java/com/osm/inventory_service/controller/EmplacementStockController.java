@@ -5,8 +5,10 @@ import com.osm.inventory_service.entity.EmplacementStock;
 import com.osm.inventory_service.service.EmplacementStockService;
 import com.xdev.xdevbase.apiDTOs.ApiResponse;
 import com.xdev.xdevbase.controllers.impl.BaseControllerImpl;
+import com.xdev.xdevbase.qr.model.QrResolveResponse;
 import com.xdev.xdevbase.services.BaseService;
 import com.xdev.xdevbase.utils.OSMLogger;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import jakarta.validation.ValidationException;
 import jakarta.ws.rs.BadRequestException;
@@ -337,7 +339,13 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
 
     @Override
     public ResponseEntity<?> resolve(String publicCode) {
-        return null;
+        try {
+            QrResolveResponse response = getBaseService().resolve(publicCode);
+            return ResponseEntity.ok(response);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @Override
