@@ -48,6 +48,9 @@ public class ProduitFinalDto extends BaseDto<ProduitFinal> implements Serializab
     Float density;
     String storageUnit;
     private Boolean actif = true;
+    private String publicCode;
+    private String qrUrl;
+    private String qrImageBase64;
 
     @JsonProperty("unitesParCols")
     public Integer getUnitesParCols() {

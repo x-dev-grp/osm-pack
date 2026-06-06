@@ -41,4 +41,7 @@ public class FournisseurDto extends BaseDto<Fournisseur> implements Serializable
     private Boolean actif;
     private String certifications;
     private LocalDateTime dateDerniereCommande;
+    private String publicCode;
+    private String qrUrl;
+    private String qrImageBase64;
 }

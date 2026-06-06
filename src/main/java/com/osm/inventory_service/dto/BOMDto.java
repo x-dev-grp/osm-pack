@@ -22,6 +22,9 @@ public class BOMDto  extends BaseDto<BOM> implements Serializable {
     private ProduitFinal produitFinal;
     private String version;
     private Boolean active;
+    private String publicCode;
+    private String qrUrl;
+    private String qrImageBase64;
 
     public UUID getSkuId() {
         return productId;

@@ -31,5 +31,8 @@ public class BonCommandeDto  extends BaseDto<BonCommande> implements Serializabl
     StatutBonCommande status;
     List<LigneBonCommandeDto> lignes;
     String motifRefus;
+    String publicCode;
+    String qrUrl;
+    String qrImageBase64;
 
 }

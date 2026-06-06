@@ -5,7 +5,9 @@ import com.osm.inventory_service.entity.ProduitFinal;
 import com.osm.inventory_service.Enum.ProduitFinalType;
 import com.osm.inventory_service.service.ProduitFinalService;
 import com.xdev.xdevbase.controllers.impl.BaseControllerImpl;
+import com.xdev.xdevbase.qr.model.QrResolveResponse;
 import com.xdev.xdevbase.services.BaseService;
+import jakarta.persistence.EntityNotFoundException;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -135,6 +137,12 @@ public class ProduitFinalController extends BaseControllerImpl<ProduitFinal, Pro
 
     @Override
     public ResponseEntity<?> resolve(String publicCode) {
-        return null;
+        try {
+            QrResolveResponse response = getBaseService().resolve(publicCode);
+            return ResponseEntity.ok(response);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 }

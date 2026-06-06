@@ -6,7 +6,9 @@ import com.osm.inventory_service.entity.BOM;
 import com.osm.inventory_service.service.BomService;
 import com.osm.inventory_service.service.MaterialNeedsService;
 import com.xdev.xdevbase.controllers.impl.BaseControllerImpl;
+import com.xdev.xdevbase.qr.model.QrResolveResponse;
 import com.xdev.xdevbase.services.BaseService;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -108,6 +110,12 @@ public class BomController extends BaseControllerImpl<BOM, BOMDto, BOMDto> {
 
     @Override
     public ResponseEntity<?> resolve(String publicCode) {
-        return null;
+        try {
+            QrResolveResponse response = getBaseService().resolve(publicCode);
+            return ResponseEntity.ok(response);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 }

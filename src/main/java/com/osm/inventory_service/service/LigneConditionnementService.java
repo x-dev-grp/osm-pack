@@ -4,13 +4,20 @@ import com.osm.inventory_service.Enum.Statue;
 import com.osm.inventory_service.dto.LigneConditionnementDto;
 import com.osm.inventory_service.entity.LigneConditionnement;
 import com.osm.inventory_service.repository.LigneConditionnementRepository;
+import com.xdev.xdevbase.config.TenantContext;
+import com.xdev.xdevbase.qr.CodeGenerator;
+import com.xdev.xdevbase.qr.model.QrCodeInfo;
+import com.xdev.xdevbase.qr.model.QrResolveResponse;
 import com.xdev.xdevbase.repos.BaseRepository;
 import com.xdev.xdevbase.services.impl.BaseServiceImpl;
+import jakarta.persistence.EntityNotFoundException;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -21,15 +28,18 @@ public class LigneConditionnementService extends BaseServiceImpl<LigneConditionn
     private final ModelMapper modelMapper;
 
     @Autowired
-    public LigneConditionnementService(BaseRepository<LigneConditionnement> repository, LigneConditionnementRepository ligneRepository, ModelMapper modelMapper) {
-        super(repository, modelMapper);
+    public LigneConditionnementService(BaseRepository<LigneConditionnement> repository,
+                                       LigneConditionnementRepository ligneRepository,
+                                       CodeGenerator codeGenerator,
+                                       ModelMapper modelMapper) {
+        super(repository, codeGenerator, modelMapper);
         this.ligneRepository = ligneRepository;
         this.modelMapper = modelMapper;
     }
 
     public List<LigneConditionnementDto> getAllLignes() {
         return ligneRepository.findAll().stream()
-                .map(ligne -> modelMapper.map(ligne, LigneConditionnementDto.class))
+                .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
@@ -37,7 +47,7 @@ public class LigneConditionnementService extends BaseServiceImpl<LigneConditionn
     public LigneConditionnementDto getLigneById(UUID id) {
         LigneConditionnement ligne = ligneRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ligne non trouvée avec id: " + id));
-        return modelMapper.map(ligne, LigneConditionnementDto.class);
+        return convertToDto(ligne);
     }
 
     @Transactional
@@ -50,8 +60,12 @@ public class LigneConditionnementService extends BaseServiceImpl<LigneConditionn
                 ligneDto.getEtat() != null ? ligneDto.getEtat() : Statue.ACTIF
         );
         LigneConditionnement savedLigne = ligneRepository.save(ligne);
-
-        return modelMapper.map(savedLigne, LigneConditionnementDto.class);
+        QrCodeInfo qrInfo = generateQrInfo("LIGNECONDITIONNEMENT", savedLigne.getId());
+        LigneConditionnementDto result = convertToDto(savedLigne);
+        result.setPublicCode(qrInfo.getPublicCode());
+        result.setQrUrl(qrInfo.getQrUrl());
+        result.setQrImageBase64(qrInfo.getQrImageBase64());
+        return result;
     }
     @Transactional
     public LigneConditionnementDto updateLigne(UUID id, LigneConditionnementDto ligneDto) {
@@ -75,7 +89,7 @@ public class LigneConditionnementService extends BaseServiceImpl<LigneConditionn
         existingLigne.setNotes(ligneDto.getNotes());
 
         LigneConditionnement updatedLigne = ligneRepository.save(existingLigne);
-        return modelMapper.map(updatedLigne, LigneConditionnementDto.class);
+        return convertToDto(updatedLigne);
     }
 
     @Transactional
@@ -101,16 +115,105 @@ public class LigneConditionnementService extends BaseServiceImpl<LigneConditionn
 
         ligne.setEtat(nouvelEtat);
         LigneConditionnement updatedLigne = ligneRepository.save(ligne);
-        return modelMapper.map(updatedLigne, LigneConditionnementDto.class);
+        return convertToDto(updatedLigne);
     }
     public List<LigneConditionnementDto> getLignesActives() {
         return ligneRepository.findByEtat(Statue.ACTIF).stream()
-                .map(ligne -> modelMapper.map(ligne, LigneConditionnementDto.class))
+                .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
     private String genererCodeLigne() {
         return generateBusinessCode("code", "LI");
+    }
+
+    private LigneConditionnementDto convertToDto(LigneConditionnement ligne) {
+        LigneConditionnementDto dto = modelMapper.map(ligne, LigneConditionnementDto.class);
+        dto.setPublicCode(ligne.getQrHex());
+        dto.setQrImageBase64(ligne.getQrImageBase64());
+        return dto;
+    }
+
+    @Override
+    protected String getEntityType() {
+        return "LIGNECONDITIONNEMENT";
+    }
+
+    @Override
+    protected String getLabel(LigneConditionnement entity) {
+        if (entity.getNom() != null && !entity.getNom().isBlank()) {
+            return entity.getNom();
+        }
+        return entity.getCode();
+    }
+
+    @Override
+    protected String getStatus(LigneConditionnement entity) {
+        if (entity.getEtat() != null) {
+            return entity.getEtat().name();
+        }
+        return entity.isActif() ? "ACTIF" : "INACTIF";
+    }
+
+    @Override
+    protected String getMobileRoute() {
+        return "/ligne/detail";
+    }
+
+    @Override
+    protected String getWebRoute(LigneConditionnement entity) {
+        if (entity == null || entity.getId() == null) {
+            return "/stock/lignes";
+        }
+        return "/stock/lignes/" + entity.getId();
+    }
+
+    @Override
+    protected Object getData(LigneConditionnement entity) {
+        return convertToDto(entity);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public QrResolveResponse resolve(String publicCode) {
+        if (publicCode == null || publicCode.isBlank()) {
+            throw new IllegalArgumentException("Le code est obligatoire");
+        }
+
+        String normalizedCode = publicCode.trim().toUpperCase(Locale.ROOT);
+        UUID tenantId = TenantContext.getCurrentTenant();
+
+        Optional<LigneConditionnement> entity = (tenantId == null)
+                ? ligneRepository.findByQrHex(normalizedCode)
+                : ligneRepository.findByQrHexAndTenantIdAndIsDeletedFalse(normalizedCode, tenantId);
+
+        if (entity.isEmpty() && tenantId != null) {
+            entity = ligneRepository.findByQrHex(normalizedCode);
+        }
+
+        return entity.map(ligne -> {
+                    QrResolveResponse response = new QrResolveResponse();
+                    response.setEntityType(getEntityType());
+                    response.setPublicCode(normalizedCode);
+                    response.setEntityId(ligne.getId().toString());
+                    response.setLabel(getLabel(ligne));
+                    response.setStatus(getStatus(ligne));
+                    response.setMobileRoute(getMobileRoute());
+                    response.setWebRoute(getWebRoute(ligne));
+                    response.setData(getData(ligne));
+                    return response;
+                })
+                .orElseThrow(() -> new EntityNotFoundException("Ligne non trouvee pour le code : " + publicCode));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<QrResolveResponse> searchByCode(String code) {
+        try {
+            return Optional.ofNullable(resolve(code));
+        } catch (Exception e) {
+            return Optional.empty();
+        }
     }
 
 

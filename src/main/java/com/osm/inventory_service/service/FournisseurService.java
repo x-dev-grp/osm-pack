@@ -4,8 +4,12 @@ import com.osm.inventory_service.dto.FournisseurDto;
 import com.osm.inventory_service.entity.Fournisseur;
 import com.osm.inventory_service.repository.FournisseurRepository;
 import com.xdev.communicator.models.enums.Currency;
+import com.xdev.xdevbase.config.TenantContext;
+import com.xdev.xdevbase.qr.model.QrCodeInfo;
+import com.xdev.xdevbase.qr.model.QrResolveResponse;
 import com.xdev.xdevbase.repos.BaseRepository;
 import com.xdev.xdevbase.services.impl.BaseServiceImpl;
+import jakarta.persistence.EntityNotFoundException;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -13,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -31,14 +37,15 @@ public class FournisseurService extends BaseServiceImpl<Fournisseur, Fournisseur
 
     public List<FournisseurDto> getAllFournisseurs() {
         return fournisseurRepository.findAll().stream()
-                .map(f -> modelMapper.map(f, FournisseurDto.class))
+                .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public FournisseurDto getFournisseurById(UUID id) {
         Fournisseur fournisseur = fournisseurRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé avec id: " + id));
-        return modelMapper.map(fournisseur, FournisseurDto.class);
+        return convertToDto(fournisseur);
     }
 
     @Transactional
@@ -69,7 +76,12 @@ public class FournisseurService extends BaseServiceImpl<Fournisseur, Fournisseur
         }
 
         Fournisseur savedFournisseur = fournisseurRepository.save(fournisseur);
-        return modelMapper.map(savedFournisseur, FournisseurDto.class);
+        QrCodeInfo qrInfo = generateQrInfo("FOURNISSEUR", savedFournisseur.getId());
+        FournisseurDto result = convertToDto(savedFournisseur);
+        result.setPublicCode(qrInfo.getPublicCode());
+        result.setQrUrl(qrInfo.getQrUrl());
+        result.setQrImageBase64(qrInfo.getQrImageBase64());
+        return result;
     }
 
     @Transactional
@@ -129,7 +141,7 @@ public class FournisseurService extends BaseServiceImpl<Fournisseur, Fournisseur
         existingFournisseur.setCertifications(fournisseurDto.getCertifications());
 
         Fournisseur updatedFournisseur = fournisseurRepository.save(existingFournisseur);
-        return modelMapper.map(updatedFournisseur, FournisseurDto.class);
+        return convertToDto(updatedFournisseur);
     }
 
 
@@ -139,7 +151,7 @@ public class FournisseurService extends BaseServiceImpl<Fournisseur, Fournisseur
                 .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé avec id: " + id));
         fournisseur.setActif(true);
         Fournisseur updatedFournisseur = fournisseurRepository.save(fournisseur);
-        return modelMapper.map(updatedFournisseur, FournisseurDto.class);
+        return convertToDto(updatedFournisseur);
     }
 
     @Transactional
@@ -148,14 +160,95 @@ public class FournisseurService extends BaseServiceImpl<Fournisseur, Fournisseur
                 .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé avec id: " + id));
         fournisseur.setActif(false);
         Fournisseur updatedFournisseur = fournisseurRepository.save(fournisseur);
-        return modelMapper.map(updatedFournisseur, FournisseurDto.class);
+        return convertToDto(updatedFournisseur);
     }
     private String genererCodeFournisseur() {
         return generateBusinessCode("code", "FO");
     }
     public List<FournisseurDto> getActiveFournisseurs() {
         return fournisseurRepository.findByActifTrue().stream()
-                .map(f -> modelMapper.map(f, FournisseurDto.class))
+                .map(this::convertToDto)
                 .collect(Collectors.toList());
+    }
+
+    private FournisseurDto convertToDto(Fournisseur fournisseur) {
+        FournisseurDto dto = modelMapper.map(fournisseur, FournisseurDto.class);
+        dto.setPublicCode(fournisseur.getQrHex());
+        dto.setQrImageBase64(fournisseur.getQrImageBase64());
+        return dto;
+    }
+
+    @Override
+    protected String getEntityType() {
+        return "FOURNISSEUR";
+    }
+
+    @Override
+    protected String getLabel(Fournisseur entity) {
+        if (entity.getNom() != null && !entity.getNom().isBlank()) {
+            return entity.getNom();
+        }
+        return entity.getCode();
+    }
+
+    @Override
+    protected String getStatus(Fournisseur entity) {
+        return Boolean.TRUE.equals(entity.getActif()) ? "ACTIF" : "INACTIF";
+    }
+
+    @Override
+    protected String getMobileRoute() {
+        return "/fournisseur/detail";
+    }
+
+    @Override
+    protected String getWebRoute(Fournisseur entity) {
+        if (entity == null || entity.getId() == null) {
+            return "/stock/fournisseurs";
+        }
+        return "/stock/fournisseurs/" + entity.getId();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public QrResolveResponse resolve(String publicCode) {
+        if (publicCode == null || publicCode.isBlank()) {
+            throw new IllegalArgumentException("Le code est obligatoire");
+        }
+
+        String normalizedCode = publicCode.trim().toUpperCase(Locale.ROOT);
+        UUID tenantId = TenantContext.getCurrentTenant();
+
+        Optional<Fournisseur> entity = (tenantId == null)
+                ? fournisseurRepository.findByQrHex(normalizedCode)
+                : fournisseurRepository.findByQrHexAndTenantIdAndIsDeletedFalse(normalizedCode, tenantId);
+
+        if (entity.isEmpty() && tenantId != null) {
+            entity = fournisseurRepository.findByQrHex(normalizedCode);
+        }
+
+        return entity.map(fournisseur -> {
+                    QrResolveResponse response = new QrResolveResponse();
+                    response.setEntityType(getEntityType());
+                    response.setPublicCode(normalizedCode);
+                    response.setEntityId(fournisseur.getId().toString());
+                    response.setLabel(getLabel(fournisseur));
+                    response.setStatus(getStatus(fournisseur));
+                    response.setMobileRoute(getMobileRoute());
+                    response.setWebRoute(getWebRoute(fournisseur));
+                    response.setData(convertToDto(fournisseur));
+                    return response;
+                })
+                .orElseThrow(() -> new EntityNotFoundException("Fournisseur non trouve pour le code : " + publicCode));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<QrResolveResponse> searchByCode(String code) {
+        try {
+            return Optional.ofNullable(resolve(code));
+        } catch (Exception e) {
+            return Optional.empty();
+        }
     }
 }
