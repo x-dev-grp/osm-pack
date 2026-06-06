@@ -14,6 +14,7 @@ import com.osm.inventory_service.repository.ArticleSecRepository;
 import com.osm.inventory_service.repository.BomLineRepository;
 import com.osm.inventory_service.repository.FournisseurRepository;
 import com.osm.inventory_service.repository.StockSecRepository;
+import com.xdev.xdevbase.config.TenantContext;
 import com.xdev.xdevbase.models.Action;
 import com.xdev.xdevbase.qr.model.QrCodeInfo;
 import com.xdev.xdevbase.qr.model.QrResolveResponse;
@@ -256,19 +257,53 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
     }
 
     @Override
+    protected String getWebRoute(ArticleSec entity) {
+        if (entity == null || entity.getId() == null) {
+            return "/stock/articles";
+        }
+        return "/stock/articles/" + entity.getId();
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public QrResolveResponse resolve(String publicCode) {
-        ArticleSec entity = articleRepository.findByQrHex(publicCode)
-                .orElseThrow(() -> new EntityNotFoundException("Article non trouvé pour le code : " + publicCode));
+        if (publicCode == null || publicCode.isBlank()) {
+            throw new IllegalArgumentException("Le code est obligatoire");
+        }
 
-        QrResolveResponse response = new QrResolveResponse();
-        response.setEntityType(getEntityType());
-        response.setPublicCode(publicCode);
-        response.setEntityId(entity.getId().toString());
-        response.setLabel(getLabel(entity));
-        response.setStatus(getStatus(entity));
-        response.setMobileRoute(getMobileRoute());
-        response.setData(convertToDto(entity));
-        return response;
+        String normalizedCode = publicCode.trim().toUpperCase(Locale.ROOT);
+        UUID tenantId = TenantContext.getCurrentTenant();
+
+        Optional<ArticleSec> entity = (tenantId == null)
+                ? articleRepository.findByQrHex(normalizedCode)
+                : articleRepository.findByQrHexAndTenantIdAndIsDeletedFalse(normalizedCode, tenantId);
+
+        if (entity.isEmpty() && tenantId != null) {
+            entity = articleRepository.findByQrHex(normalizedCode);
+        }
+
+        return entity.map(article -> {
+                    QrResolveResponse response = new QrResolveResponse();
+                    response.setEntityType(getEntityType());
+                    response.setPublicCode(normalizedCode);
+                    response.setEntityId(article.getId().toString());
+                    response.setLabel(getLabel(article));
+                    response.setStatus(getStatus(article));
+                    response.setMobileRoute(getMobileRoute());
+                    response.setWebRoute(getWebRoute(article));
+                    response.setData(convertToDto(article));
+                    return response;
+                })
+                .orElseThrow(() -> new EntityNotFoundException("Article non trouve pour le code : " + publicCode));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<QrResolveResponse> searchByCode(String code) {
+        try {
+            return Optional.ofNullable(resolve(code));
+        } catch (Exception e) {
+            return Optional.empty();
+        }
     }
 }
