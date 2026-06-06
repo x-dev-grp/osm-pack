@@ -174,7 +174,12 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
 
     @Transactional(readOnly = true)
     public List<BOMDto> getAllBoms() {
-        return bomRepository.findAll().stream().map(this::convertToDto).collect(Collectors.toList());
+        return bomRepository.findAll().stream()
+                .sorted(java.util.Comparator
+                        .comparing(BOM::isActive).reversed()
+                        .thenComparing(BOM::getCreatedDate, java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())))
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
     }
 
     @Transactional

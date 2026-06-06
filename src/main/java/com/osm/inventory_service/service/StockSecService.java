@@ -329,31 +329,53 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
         if (articleId == null) {
             throw new RuntimeException("L'identifiant de l'article est obligatoire");
         }
-        if (nouvelleQuantite == null || nouvelleQuantite < 0) {
-            throw new RuntimeException("La quantite ne peut pas etre negative");
+
+        if (nouvelleQuantite == null) {
+            throw new RuntimeException("La quantité d'ajustement est obligatoire");
         }
+
         StockSec stock = stockRepository.findByArticleId(articleId)
-                .orElseThrow(() -> new RuntimeException("Aucun stock trouve pour cet article"));
+                .orElseThrow(() -> new RuntimeException("Aucun stock trouvé pour cet article"));
 
         int ancienneQuantite = safe(stock.getQuantiteActuelle());
         int quantiteReservee = safe(stock.getQuantiteReservee());
-        if (nouvelleQuantite < quantiteReservee) {
+
+        // nouvelleQuantite = delta d'ajustement
+        // Exemple:
+        // ancienneQuantite = 100
+        // nouvelleQuantite = -20
+        // nouvelle quantité finale = 80
+        int quantiteFinale = ancienneQuantite + nouvelleQuantite;
+
+        if (quantiteFinale < 0) {
             throw new RuntimeException(
-                    "Ajustement refuse: quantite actuelle (" + nouvelleQuantite +
-                            ") < quantite reservee (" + quantiteReservee + ")"
+                    "Ajustement refusé: la quantité finale ne peut pas être négative (" + quantiteFinale + ")"
             );
         }
 
-        stock.setQuantiteActuelle(nouvelleQuantite);
+        if (quantiteFinale < quantiteReservee) {
+            throw new RuntimeException(
+                    "Ajustement refusé: quantité finale (" + quantiteFinale +
+                            ") < quantité réservée (" + quantiteReservee + ")"
+            );
+        }
+
+        stock.setQuantiteActuelle(quantiteFinale);
+
         StockSec updatedStock = saveWithValidation(stock, "ajuster");
 
         MouvementStockSec mouvement = new MouvementStockSec();
         mouvement.setArticle(stock.getArticle());
-        mouvement.setQuantite(nouvelleQuantite - ancienneQuantite);
+
+        // Store only the adjustment delta, not the final stock
+        mouvement.setQuantite(nouvelleQuantite);
+
         mouvement.setTypeMouvement(TypeMouvement.AJUSTEMENT);
         mouvement.setMotif(motif);
         mouvement.setDateMouvement(LocalDateTime.now());
+
         mouvementStockSecRepository.save(mouvement);
+
         return convertToDto(updatedStock);
     }
 
