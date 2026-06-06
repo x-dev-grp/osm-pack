@@ -38,5 +38,14 @@ public class ArticleSecDto extends BaseDto<ArticleSec> implements Serializable {
   private String qrImageBase64;
   private Map<String, Object> configuration;
 
+  /** Stock snapshot — single source of truth for list and detail views. */
+  private UUID stockId;
+  private Integer quantiteActuelle;
+  private Integer quantiteReservee;
+  private Integer quantiteDisponible;
+  private Boolean belowMinimum;
+  private LocalDateTime stockLastModifiedDate;
+  private EmplacementStockDto emplacement;
+
 
 }

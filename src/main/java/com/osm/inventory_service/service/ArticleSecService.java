@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.osm.inventory_service.Enum.CategorieArticle;
 import com.osm.inventory_service.config.ArticleConfig;
 import com.osm.inventory_service.dto.ArticleSecDto;
+import com.osm.inventory_service.dto.EmplacementStockDto;
 import com.osm.inventory_service.dto.FournisseurDto;
 import com.osm.inventory_service.entity.ArticleSec;
 import com.osm.inventory_service.entity.Fournisseur;
@@ -64,19 +65,34 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
     }
 
     public ArticleSec getArticleEntityById(UUID id) {
-        return articleRepository.findById(id)
+        return articleRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Article non trouvé avec ID: " + id));
     }
 
+    public ArticleSecDto toArticleDto(ArticleSec article) {
+        if (article == null) {
+            return null;
+        }
+        StockSec stock = stockSecRepository.findByArticleId(article.getId()).orElse(null);
+        return convertToDto(article, stock);
+    }
+
+    @Transactional(readOnly = true)
     public List<ArticleSecDto> getAllArticles() {
-        return articleRepository.findAll().stream()
-                .map(this::convertToDto)
+        Map<UUID, StockSec> stockByArticleId = stockSecRepository.findAllByIsDeletedFalse().stream()
+                .filter(stock -> stock.getArticle() != null && stock.getArticle().getId() != null)
+                .collect(Collectors.toMap(stock -> stock.getArticle().getId(), stock -> stock, (left, right) -> left));
+
+        return articleRepository.findAllByIsDeletedFalse().stream()
+                .map(article -> convertToDto(article, stockByArticleId.get(article.getId())))
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public ArticleSecDto getArticleById(UUID id) {
         ArticleSec article = getArticleEntityById(id);
-        return convertToDto(article);
+        StockSec stock = stockSecService.ensureStockEntity(article);
+        return convertToDto(article, stock);
     }
 
     @Transactional
@@ -219,7 +235,16 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         }
         return article;
     }
+    private int safeQuantity(Integer value) {
+        return value == null ? 0 : value;
+    }
+
     private ArticleSecDto convertToDto(ArticleSec article) {
+        StockSec stock = stockSecRepository.findByArticleId(article.getId()).orElse(null);
+        return convertToDto(article, stock);
+    }
+
+    private ArticleSecDto convertToDto(ArticleSec article, StockSec stock) {
         ArticleSecDto dto = modelMapper.map(article, ArticleSecDto.class);
         if (article.getFournisseur() != null) {
             dto.setFournisseur(modelMapper.map(article.getFournisseur(), FournisseurDto.class));
@@ -233,8 +258,40 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         }
         dto.setPublicCode(article.getQrHex());
         dto.setQrImageBase64(article.getQrImageBase64());
+        applyStockSnapshot(dto, article, stock);
 
         return dto;
+    }
+
+    private void applyStockSnapshot(ArticleSecDto dto, ArticleSec article, StockSec stock) {
+        int minimum = safeQuantity(article.getStockMinimum());
+
+        if (stock == null) {
+            dto.setQuantiteActuelle(0);
+            dto.setQuantiteReservee(0);
+            dto.setQuantiteDisponible(0);
+            dto.setBelowMinimum(false);
+            dto.setEmplacement(null);
+            dto.setStockId(null);
+            dto.setStockLastModifiedDate(null);
+            return;
+        }
+
+        int actuelle = safeQuantity(stock.getQuantiteActuelle());
+        int reservee = safeQuantity(stock.getQuantiteReservee());
+
+        dto.setStockId(stock.getId());
+        dto.setQuantiteActuelle(actuelle);
+        dto.setQuantiteReservee(reservee);
+        dto.setQuantiteDisponible(actuelle - reservee);
+        dto.setBelowMinimum(minimum > 0 && actuelle <= minimum);
+        dto.setStockLastModifiedDate(stock.getLastModifiedDate());
+
+        if (stock.getEmplacement() != null) {
+            dto.setEmplacement(modelMapper.map(stock.getEmplacement(), EmplacementStockDto.class));
+        } else {
+            dto.setEmplacement(null);
+        }
     }
     @Override
     protected String getEntityType() {

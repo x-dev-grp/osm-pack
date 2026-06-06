@@ -32,6 +32,12 @@ public interface MouvementStockSecRepository extends BaseRepository<MouvementSto
 
     List<MouvementStockSec> findByArticleId(UUID articleId);
 
+    @Query("SELECT m FROM MouvementStockSec m "
+            + "WHERE m.article.id = :articleId "
+            + "AND COALESCE(m.isDeleted, FALSE) = FALSE "
+            + "ORDER BY m.dateMouvement DESC")
+    List<MouvementStockSec> findByArticleIdNotDeletedOrderByDateMouvementDesc(@Param("articleId") UUID articleId);
+
 
 
     @Query("SELECT m FROM MouvementStockSec m LEFT JOIN FETCH m.article "
