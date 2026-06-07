@@ -99,13 +99,8 @@ public class ProduitFinalController extends BaseControllerImpl<ProduitFinal, Pro
 
     @PutMapping("/{id}/desactiver")
     public ResponseEntity<?> desactiverProduitFinal(@PathVariable UUID id) {
-        try {
-            produitFinalService.desactiverProduitFinal(id);
-            return ResponseEntity.ok().build();
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
-        }
+        produitFinalService.desactiverProduitFinal(id);
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping("/{id}/activer")
@@ -121,13 +116,8 @@ public class ProduitFinalController extends BaseControllerImpl<ProduitFinal, Pro
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> supprimerProduitFinal(@PathVariable UUID id) {
-        try {
-            produitFinalService.supprimerProduitFinal(id);
-            return ResponseEntity.ok().build();
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
-        }
+        produitFinalService.supprimerProduitFinal(id);
+        return ResponseEntity.ok().build();
     }
 
     @Override

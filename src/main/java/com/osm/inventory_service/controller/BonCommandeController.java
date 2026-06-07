@@ -174,6 +174,19 @@ public class BonCommandeController extends BaseControllerImpl<BonCommande, BonCo
         }
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<BonCommande, BonCommandeDto>> supprimerBonCommande(@PathVariable UUID id) {
+        logger.info("Deleting bon commande with id: {}", id);
+        try {
+            bonCommandeService.supprimerBonCommande(id);
+            return ResponseEntity.ok(new ApiResponse<>(true, "Bon commande deleted successfully", null));
+        } catch (Exception e) {
+            logger.warn("Error deleting bon commande with id {}: {}", id, e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
+        }
+    }
+
     @Override
     protected String getResourceName() {
         return "BonCommande";

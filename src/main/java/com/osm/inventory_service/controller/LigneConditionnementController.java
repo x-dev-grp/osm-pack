@@ -121,6 +121,17 @@ public class LigneConditionnementController extends BaseControllerImpl<LigneCond
         }
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> supprimerLigne(@PathVariable UUID id) {
+        try {
+            ligneService.supprimerLigne(id);
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @Override
     protected String getResourceName() {
         return "LigneConditionnement";

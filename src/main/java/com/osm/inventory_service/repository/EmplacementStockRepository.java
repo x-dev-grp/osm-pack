@@ -15,23 +15,24 @@ public interface EmplacementStockRepository extends BaseRepository<EmplacementSt
 
     Optional<EmplacementStock> findByCode(String code);
 
-    List<EmplacementStock> findByTypeEmplacement(TypeEmplacement type);
+    Optional<EmplacementStock> findByCodeAndIsDeletedFalse(String code);
 
-    List<EmplacementStock> findByZone(String zone);
+    List<EmplacementStock> findByTypeEmplacementAndIsDeletedFalse(TypeEmplacement type);
 
-    List<EmplacementStock> findByDisponibleTrue();
+    List<EmplacementStock> findByZoneAndIsDeletedFalse(String zone);
 
-    @Query("SELECT e FROM EmplacementStock e WHERE e.zone = :zone AND e.disponible = true")
+    List<EmplacementStock> findByDisponibleTrueAndIsDeletedFalse();
+
+    @Query("SELECT e FROM EmplacementStock e WHERE e.zone = :zone AND e.disponible = true AND COALESCE(e.isDeleted, FALSE) = FALSE")
     List<EmplacementStock> findDisponiblesParZone(@Param("zone") String zone);
 
-    @Query("SELECT e FROM EmplacementStock e WHERE e.reservePour = :client")
+    @Query("SELECT e FROM EmplacementStock e WHERE e.reservePour = :client AND COALESCE(e.isDeleted, FALSE) = FALSE")
     List<EmplacementStock> findReservesPour(@Param("client") String client);
 
-
-    @Query("SELECT e FROM EmplacementStock e WHERE e.temperatureMin IS NOT NULL OR e.temperatureMax IS NOT NULL")
+    @Query("SELECT e FROM EmplacementStock e WHERE (e.temperatureMin IS NOT NULL OR e.temperatureMax IS NOT NULL) AND COALESCE(e.isDeleted, FALSE) = FALSE")
     List<EmplacementStock> findEmplacementsTemperatureControlee();
 
     boolean existsByCode(String code);
 
-
+    boolean existsByCodeAndIsDeletedFalse(String code);
 }

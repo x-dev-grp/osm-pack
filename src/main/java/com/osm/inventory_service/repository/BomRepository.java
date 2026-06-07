@@ -12,7 +12,13 @@ import java.util.UUID;
 public interface BomRepository extends BaseRepository<BOM> {
     List<BOM> findByProduitFinalId(UUID productId);
 
+    List<BOM> findByProduitFinalIdAndIsDeletedFalse(UUID productId);
+
     Optional<BOM> findFirstByProduitFinalIdAndActiveTrue(UUID productId);
 
+    Optional<BOM> findFirstByProduitFinalIdAndActiveTrueAndIsDeletedFalse(UUID productId);
+
     long countByProduitFinalId(UUID productId);
+
+    long countByProduitFinalIdAndIsDeletedFalse(UUID productId);
 }

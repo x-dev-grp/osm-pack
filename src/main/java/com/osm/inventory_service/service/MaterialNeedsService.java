@@ -41,7 +41,7 @@ public class MaterialNeedsService {
             throw new IllegalArgumentException("La quantite de production doit etre positive");
         }
 
-        var bom = bomRepository.findById(bomId)
+        var bom = bomRepository.findByIdAndIsDeletedFalse(bomId)
                 .orElseThrow(() -> new ResourceNotFoundException("BOM non trouvee avec l'id : " + bomId));
 
         List<MaterialNeedLineDto> lines = new ArrayList<>();
@@ -65,7 +65,7 @@ public class MaterialNeedsService {
             dto.setQuantityNeeded(needed);
             dto.setQuantityNeededRounded(neededRounded);
 
-            stockRepository.findByArticleId(articleId).ifPresentOrElse(stock -> fillStock(dto, stock), () -> {
+            stockRepository.findByArticleIdAndIsDeletedFalse(articleId).ifPresentOrElse(stock -> fillStock(dto, stock), () -> {
                 dto.setQuantiteActuelle(0);
                 dto.setQuantiteReservee(0);
                 dto.setQuantiteDisponible(0);

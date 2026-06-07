@@ -34,16 +34,18 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
     private final ArticleSecService articleSecService;
     private final EmplacementStockRepository emplacementRepository;
     private final ModelMapper modelMapper;
+    private final InventoryDeleteGuardService deleteGuard;
 
     @Lazy
     @Autowired
-    public StockSecService(BaseRepository<StockSec> repository, StockSecRepository stockRepository, MouvementStockSecRepository mouvementStockSecRepository, ArticleSecService articleSecService, EmplacementStockRepository emplacementRepository, ModelMapper modelMapper) {
+    public StockSecService(BaseRepository<StockSec> repository, StockSecRepository stockRepository, MouvementStockSecRepository mouvementStockSecRepository, ArticleSecService articleSecService, EmplacementStockRepository emplacementRepository, ModelMapper modelMapper, InventoryDeleteGuardService deleteGuard) {
         super(repository, modelMapper);
         this.stockRepository = stockRepository;
         this.mouvementStockSecRepository = mouvementStockSecRepository;
         this.articleSecService = articleSecService;
         this.emplacementRepository = emplacementRepository;
         this.modelMapper = modelMapper;
+        this.deleteGuard = deleteGuard;
     }
 
     private int safe(Integer value) {
@@ -107,7 +109,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
             throw new RuntimeException("La quantite de reservation doit etre positive");
         }
 
-        StockSec stock = stockRepository.findByArticleId(articleId)
+        StockSec stock = stockRepository.findByArticleIdAndIsDeletedFalse(articleId)
                 .orElseThrow(() -> new RuntimeException("Aucun stock trouve pour cet article"));
 
         int quantiteActuelle = safe(stock.getQuantiteActuelle());
@@ -135,7 +137,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
             throw new RuntimeException("La quantite d'annulation doit etre positive");
         }
 
-        StockSec stock = stockRepository.findByArticleId(articleId)
+        StockSec stock = stockRepository.findByArticleIdAndIsDeletedFalse(articleId)
                 .orElseThrow(() -> new RuntimeException("Aucun stock trouvé pour cet article"));
 
         int quantiteReservee = safe(stock.getQuantiteReservee());
@@ -169,7 +171,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
             throw new RuntimeException("La quantite de consommation doit etre positive");
         }
 
-        StockSec stock = stockRepository.findByArticleId(articleId)
+        StockSec stock = stockRepository.findByArticleIdAndIsDeletedFalse(articleId)
                 .orElseThrow(() -> new RuntimeException("Aucun stock trouve pour cet article"));
 
         int quantiteActuelle = safe(stock.getQuantiteActuelle());
@@ -198,12 +200,12 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
     }
 
     public StockSec getStockEntityById(UUID id) {
-        return stockRepository.findById(id)
+        return stockRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Stock non trouve avec ID: " + id));
     }
 
     public List<StockSecDto> getAllStocks() {
-        return stockRepository.findAll().stream()
+        return stockRepository.findAllByIsDeletedFalse().stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
@@ -215,7 +217,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
 
     public StockSecDto getStockByArticle(UUID articleId) {
         ArticleSec article = articleSecService.getArticleEntityById(articleId);
-        StockSec stock = stockRepository.findByArticleId(articleId)
+        StockSec stock = stockRepository.findByArticleIdAndIsDeletedFalse(articleId)
                 .orElseThrow(() -> new RuntimeException("Aucun stock trouve pour l'article ID: " + articleId));
         return convertToDto(stock);
     }
@@ -223,7 +225,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
     @Transactional
     public StockSecDto createStockForArticle(UUID articleId) {
         ArticleSec article = articleSecService.getArticleEntityById(articleId);
-        if (stockRepository.findByArticleId(articleId).isPresent()) {
+        if (stockRepository.findByArticleIdAndIsDeletedFalse(articleId).isPresent()) {
             throw new RuntimeException("Un stock existe deja pour cet article");
         }
 
@@ -244,7 +246,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
         if (quantite == null || quantite <= 0) {
             throw new RuntimeException("La quantite doit etre positive");
         }
-        StockSec stock = stockRepository.findByArticleId(articleId)
+        StockSec stock = stockRepository.findByArticleIdAndIsDeletedFalse(articleId)
                 .orElseThrow(() -> new RuntimeException("Aucun stock trouve pour cet article"));
 
         int quantiteActuelle = safe(stock.getQuantiteActuelle());
@@ -268,7 +270,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
         if (quantite == null || quantite <= 0) {
             throw new RuntimeException("La quantite doit etre positive");
         }
-        StockSec stock = stockRepository.findByArticleId(articleId)
+        StockSec stock = stockRepository.findByArticleIdAndIsDeletedFalse(articleId)
                 .orElseThrow(() -> new RuntimeException("Aucun stock trouve pour cet article"));
 
         int quantiteActuelle = safe(stock.getQuantiteActuelle());
@@ -292,7 +294,9 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
     @Transactional(readOnly = true)
     public List<ArticleStockSummaryDto> getAllStockSummaries() {
         return stockRepository.findAllByIsDeletedFalse().stream()
-                .filter(stock -> stock.getArticle() != null && stock.getArticle().getId() != null)
+                .filter(stock -> stock.getArticle() != null
+                        && stock.getArticle().getId() != null
+                        && !Boolean.TRUE.equals(stock.getArticle().getDeleted()))
                 .map(stock -> {
                     ArticleStockSummaryDto summary = new ArticleStockSummaryDto();
                     summary.setArticleId(stock.getArticle().getId());
@@ -335,7 +339,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
             throw new RuntimeException("La quantité d'ajustement est obligatoire");
         }
 
-        StockSec stock = stockRepository.findByArticleId(articleId)
+        StockSec stock = stockRepository.findByArticleIdAndIsDeletedFalse(articleId)
                 .orElseThrow(() -> new RuntimeException("Aucun stock trouvé pour cet article"));
 
         int ancienneQuantite = safe(stock.getQuantiteActuelle());
@@ -381,7 +385,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
     }
 
     public List<MouvementStockSecDto> getAllMouvementsDto() {
-        return mouvementStockSecRepository.findAll().stream()
+        return mouvementStockSecRepository.findAllByIsDeletedFalse().stream()
                 .map(mouvement -> modelMapper.map(mouvement, MouvementStockSecDto.class))
                 .collect(Collectors.toList());
     }
@@ -411,10 +415,10 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
     }
 
     public List<StockSecDto> getStocksByEmplacement(UUID emplacementId) {
-        emplacementRepository.findById(emplacementId)
+        emplacementRepository.findByIdAndIsDeletedFalse(emplacementId)
                 .orElseThrow(() -> new RuntimeException("Emplacement non trouve avec ID: " + emplacementId));
 
-        return stockRepository.findByEmplacementId(emplacementId).stream()
+        return stockRepository.findByEmplacementIdAndIsDeletedFalse(emplacementId).stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
@@ -434,7 +438,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
     @Transactional
     public StockSecDto assignerEmplacement(UUID stockId, UUID emplacementId) {
         StockSec stock = getStockEntityById(stockId);
-        EmplacementStock emplacement = emplacementRepository.findById(emplacementId)
+        EmplacementStock emplacement = emplacementRepository.findByIdAndIsDeletedFalse(emplacementId)
                 .orElseThrow(() -> new RuntimeException("Emplacement non trouve"));
 
         validateEmplacementCategorie(stock, emplacement);
@@ -452,7 +456,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
     public StockSecDto transfererEmplacement(UUID stockId, UUID nouvelEmplacementId) {
         StockSec stock = getStockEntityById(stockId);
         EmplacementStock ancienEmplacement = stock.getEmplacement();
-        EmplacementStock nouvelEmplacement = emplacementRepository.findById(nouvelEmplacementId)
+        EmplacementStock nouvelEmplacement = emplacementRepository.findByIdAndIsDeletedFalse(nouvelEmplacementId)
                 .orElseThrow(() -> new RuntimeException("Emplacement non trouve"));
 
         validateEmplacementCategorie(stock, nouvelEmplacement);
@@ -484,7 +488,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
             }
         }
 
-        List<StockSec> occupants = stockRepository.findByEmplacementId(emplacement.getId());
+        List<StockSec> occupants = stockRepository.findByEmplacementIdAndIsDeletedFalse(emplacement.getId());
         boolean occupiedByAnotherStock = occupants.stream()
                 .anyMatch(s -> s.getId() != null && !s.getId().equals(stock.getId()));
 
@@ -519,7 +523,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
         StockSec updatedStock = stockRepository.save(stock);
 
         if (current != null) {
-            List<StockSec> remaining = stockRepository.findByEmplacementId(current.getId());
+            List<StockSec> remaining = stockRepository.findByEmplacementIdAndIsDeletedFalse(current.getId());
             boolean stillUsed = remaining.stream().anyMatch(s -> !s.getId().equals(stockId));
             if (!stillUsed) {
                 current.setDisponible(true);
@@ -533,7 +537,7 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
 
     @Transactional
     public StockSec ensureStockEntity(ArticleSec article) {
-        return stockRepository.findByArticleId(article.getId())
+        return stockRepository.findByArticleIdAndIsDeletedFalse(article.getId())
                 .orElseGet(() -> {
                     StockSec created = new StockSec();
                     created.setArticle(article);
@@ -547,6 +551,28 @@ public class StockSecService extends BaseServiceImpl<StockSec, StockSecDto, Stoc
     public StockSecDto getOrCreateStockByArticle(UUID articleId) {
         ArticleSec article = articleSecService.getArticleEntityById(articleId);
         return convertToDto(ensureStockEntity(article));
+    }
+
+    @Transactional
+    public void supprimerStock(UUID id) {
+        StockSec stock = getStockEntityById(id);
+        deleteGuard.assertStockCanBeRemoved(stock);
+        stock.setDeleted(true);
+        stockRepository.save(stock);
+    }
+
+    @Override
+    @Transactional
+    public StockSecDto delete(UUID id) {
+        StockSecDto dto = getStockById(id);
+        supprimerStock(id);
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public void remove(UUID id) {
+        supprimerStock(id);
     }
 
     @Override

@@ -15,12 +15,15 @@ public interface StockSecRepository extends BaseRepository<StockSec> {
 
     Optional<StockSec> findByArticleId(UUID articleId);
 
+    Optional<StockSec> findByArticleIdAndIsDeletedFalse(UUID articleId);
+
     List<StockSec> findByEmplacementId(UUID emplacementId);
 
-    @Query("SELECT s FROM StockSec s WHERE s.emplacement.zone = :zone")
+    List<StockSec> findByEmplacementIdAndIsDeletedFalse(UUID emplacementId);
+
+    @Query("SELECT s FROM StockSec s WHERE s.emplacement.zone = :zone AND COALESCE(s.isDeleted, FALSE) = FALSE")
     List<StockSec> findByZone(@Param("zone") String zone);
 
-    @Query("SELECT s FROM StockSec s WHERE s.emplacement.disponible = true")
+    @Query("SELECT s FROM StockSec s WHERE s.emplacement.disponible = true AND COALESCE(s.isDeleted, FALSE) = FALSE")
     List<StockSec> findByEmplacementDisponible();
-
 }

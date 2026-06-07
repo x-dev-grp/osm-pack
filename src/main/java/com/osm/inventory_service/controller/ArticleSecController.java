@@ -129,13 +129,14 @@ public class ArticleSecController extends BaseControllerImpl<ArticleSec, Article
 
     @PutMapping("/{id}/desactiver")
     public ResponseEntity<?> desactiverArticle(@PathVariable UUID id) {
-        try {
-            ArticleSecDto deactivated = articleService.desactiverArticle(id);
-            return ResponseEntity.ok(attachPermittedActions(deactivated));
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
-        }
+        ArticleSecDto deactivated = articleService.desactiverArticle(id);
+        return ResponseEntity.ok(attachPermittedActions(deactivated));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> supprimerArticle(@PathVariable UUID id) {
+        articleService.supprimerArticle(id);
+        return ResponseEntity.noContent().build();
     }
 
     @Override

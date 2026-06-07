@@ -59,31 +59,31 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
 
     @Transactional(readOnly = true)
     public BOMDto getBomById(UUID id) {
-        BOM bom = bomRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("BOM non trouvee avec l'id : " + id));
+        BOM bom = bomRepository.findByIdAndIsDeletedFalse(id).orElseThrow(() -> new ResourceNotFoundException("BOM non trouvee avec l'id : " + id));
         return convertToDto(bom);
     }
 
     @Transactional(readOnly = true)
     public List<BOMDto> getBomsByProduct(UUID productId) {
-        return bomRepository.findByProduitFinalId(productId).stream().map(this::convertToDto).collect(Collectors.toList());
+        return bomRepository.findByProduitFinalIdAndIsDeletedFalse(productId).stream().map(this::convertToDto).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public BOMDto getActiveBomForProduct(UUID productId) {
-        return bomRepository.findFirstByProduitFinalIdAndActiveTrue(productId)
+        return bomRepository.findFirstByProduitFinalIdAndActiveTrueAndIsDeletedFalse(productId)
                 .map(this::convertToDto)
                 .orElse(null);
     }
 
     @Transactional
     public BOMDto activateBom(UUID bomId) {
-        BOM bom = bomRepository.findById(bomId)
+        BOM bom = bomRepository.findByIdAndIsDeletedFalse(bomId)
                 .orElseThrow(() -> new ResourceNotFoundException("BOM non trouvee avec l'id : " + bomId));
         if (bom.getProduitFinal() == null) {
             throw new InventoryBusinessException("BOM_NO_PRODUCT", "Impossible d'activer une nomenclature sans produit");
         }
         UUID productId = bom.getProduitFinal().getId();
-        List<BOM> siblings = bomRepository.findByProduitFinalId(productId);
+        List<BOM> siblings = bomRepository.findByProduitFinalIdAndIsDeletedFalse(productId);
         for (BOM other : siblings) {
             other.setActive(other.getId().equals(bomId));
         }
@@ -97,13 +97,13 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
     public BOMDto createBom(BOMDto bomDto) {
         validateBomDto(bomDto, true);
 
-        ProduitFinal produitFinal = produitFinalRepository.findById(bomDto.getProductId())
+        ProduitFinal produitFinal = produitFinalRepository.findByIdAndIsDeletedFalse(bomDto.getProductId())
                 .orElseThrow(() -> new ResourceNotFoundException("Produit non trouve avec l'id : " + bomDto.getProductId()));
         if (produitFinal.getType() == ProduitFinalType.VRAC) {
             throw new InventoryBusinessException("BOM_VRAC_NOT_ALLOWED", "Une nomenclature emballage n'est pas applicable aux produits VRAC");
         }
 
-        int count = bomRepository.findByProduitFinalId(bomDto.getProductId()).size();
+        int count = bomRepository.findByProduitFinalIdAndIsDeletedFalse(bomDto.getProductId()).size();
         String version = "V" + (count + 1);
 
         BOM bom = new BOM();
@@ -113,7 +113,7 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
 
         boolean shouldActivate = Boolean.TRUE.equals(bomDto.getActive()) || count == 0;
         if (shouldActivate) {
-            List<BOM> existing = bomRepository.findByProduitFinalId(produitFinal.getId());
+            List<BOM> existing = bomRepository.findByProduitFinalIdAndIsDeletedFalse(produitFinal.getId());
             existing.forEach(other -> other.setActive(false));
             if (!existing.isEmpty()) {
                 bomRepository.saveAll(existing);
@@ -132,14 +132,14 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
 
     @Transactional
     public BOMDto updateBom(UUID id, BOMDto bomDto) {
-        BOM bom = bomRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("BOM non trouvee avec l'id : " + id));
+        BOM bom = bomRepository.findByIdAndIsDeletedFalse(id).orElseThrow(() -> new ResourceNotFoundException("BOM non trouvee avec l'id : " + id));
         validateBomDto(bomDto, false);
 
         if (bomDto.getProductId() == null) {
             throw new InventoryBusinessException("BOM_PRODUCT_REQUIRED", "Le produit fini est obligatoire");
         }
 
-        ProduitFinal produitFinal = produitFinalRepository.findById(bomDto.getProductId())
+        ProduitFinal produitFinal = produitFinalRepository.findByIdAndIsDeletedFalse(bomDto.getProductId())
                 .orElseThrow(() -> new ResourceNotFoundException("Produit non trouve avec l'id : " + bomDto.getProductId()));
         if (produitFinal.getType() == ProduitFinalType.VRAC) {
             throw new InventoryBusinessException("BOM_VRAC_NOT_ALLOWED", "Une nomenclature emballage n'est pas applicable aux produits VRAC");
@@ -153,7 +153,7 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
         bom.getLines().addAll(buildLines(bom, bomDto.getLines()));
 
         if (Boolean.TRUE.equals(bomDto.getActive())) {
-            List<BOM> siblings = bomRepository.findByProduitFinalId(produitFinal.getId());
+            List<BOM> siblings = bomRepository.findByProduitFinalIdAndIsDeletedFalse(produitFinal.getId());
             for (BOM other : siblings) {
                 other.setActive(other.getId().equals(bom.getId()));
             }
@@ -174,7 +174,7 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
 
     @Transactional(readOnly = true)
     public List<BOMDto> getAllBoms() {
-        return bomRepository.findAll().stream()
+        return bomRepository.findAllByIsDeletedFalse().stream()
                 .sorted(java.util.Comparator
                         .comparing(BOM::isActive).reversed()
                         .thenComparing(BOM::getCreatedDate, java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())))
@@ -184,12 +184,28 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
 
     @Transactional
     public void deleteBom(UUID id) {
-        BOM bom = bomRepository.findById(id)
+        BOM bom = bomRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("BOM non trouvee avec l'id : " + id));
         if (bom.isActive()) {
             throw new InventoryBusinessException("BOM_ACTIVE_DELETE", "Desactivez la nomenclature avant de la supprimer");
         }
-        bomRepository.deleteById(id);
+        bom.setDeleted(true);
+        bom.setActive(false);
+        bomRepository.save(bom);
+    }
+
+    @Override
+    @Transactional
+    public BOMDto delete(UUID id) {
+        BOMDto dto = getBomById(id);
+        deleteBom(id);
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public void remove(UUID id) {
+        deleteBom(id);
     }
 
     private void validateBomDto(BOMDto bomDto, boolean creating) {
@@ -211,7 +227,7 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
             if (lineDto.getQuantity() <= 0) {
                 throw new InventoryBusinessException("BOM_LINE_QTY_INVALID", "La quantite par unite doit etre positive");
             }
-            ArticleSec article = articleRepository.findById(lineDto.getArticleId())
+            ArticleSec article = articleRepository.findByIdAndIsDeletedFalse(lineDto.getArticleId())
                     .orElseThrow(() -> new ResourceNotFoundException("Article non trouve avec l'id : " + lineDto.getArticleId()));
             if (!Boolean.TRUE.equals(article.getActif())) {
                 throw new InventoryBusinessException(
@@ -224,7 +240,7 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
 
     private List<BomLine> buildLines(BOM bom, List<BomLineDto> lineDtos) {
         return lineDtos.stream().map(lineDto -> {
-            ArticleSec article = articleRepository.findById(lineDto.getArticleId())
+            ArticleSec article = articleRepository.findByIdAndIsDeletedFalse(lineDto.getArticleId())
                     .orElseThrow(() -> new ResourceNotFoundException("Article non trouve avec l'id : " + lineDto.getArticleId()));
             BomLine line = new BomLine();
             line.setBom(bom);
@@ -319,6 +335,9 @@ public class BomService extends BaseServiceImpl<BOM, BOMDto, BOMDto> {
         }
 
         return entity.map(bom -> {
+                    if (Boolean.TRUE.equals(bom.getDeleted())) {
+                        throw new EntityNotFoundException("BOM non trouvee pour le code : " + publicCode);
+                    }
                     QrResolveResponse response = new QrResolveResponse();
                     response.setEntityType(getEntityType());
                     response.setPublicCode(normalizedCode);

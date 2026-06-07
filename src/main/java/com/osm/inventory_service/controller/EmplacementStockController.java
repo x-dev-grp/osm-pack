@@ -2,6 +2,7 @@ package com.osm.inventory_service.controller;
 
 import com.osm.inventory_service.dto.EmplacementStockDto;
 import com.osm.inventory_service.entity.EmplacementStock;
+import com.osm.inventory_service.exception.InventoryBusinessException;
 import com.osm.inventory_service.service.EmplacementStockService;
 import com.xdev.xdevbase.apiDTOs.ApiResponse;
 import com.xdev.xdevbase.controllers.impl.BaseControllerImpl;
@@ -65,7 +66,7 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
             EmplacementStockDto emplacement = emplacementService.getEmplacementById(id);
             log.debug("Successfully fetched emplacement with id: {}", id);
             return ResponseEntity.ok(new ApiResponse<>(true, "Emplacement retrieved successfully", Collections.singletonList(attachPermittedActions(emplacement))));
-        } catch ( NotFoundException e) {
+        } catch (NotFoundException e) {
             log.warn("Emplacement not found with id: {}", id);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ApiResponse<>(false, e.getMessage(), null));
@@ -78,6 +79,7 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
             OSMLogger.logPerformance(this.getClass(), "getEmplacementById", startTime, System.currentTimeMillis());
         }
     }
+
     @PutMapping("/{id}/activer")
     public ResponseEntity<ApiResponse<EmplacementStock, EmplacementStockDto>> activerEmplacement(@PathVariable UUID id) {
         long startTime = System.currentTimeMillis();
@@ -86,6 +88,10 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
             EmplacementStockDto dto = emplacementService.activerEmplacement(id);
             log.info("Emplacement activé avec id: {}", id);
             return ResponseEntity.ok(new ApiResponse<>(true, "Emplacement activé avec succès", Arrays.asList(attachPermittedActions(dto))));
+        } catch (InventoryBusinessException e) {
+            log.warn("Activation refusée pour l'emplacement {}: {}", id, e.getMessage());
+            return ResponseEntity.status(e.getStatus())
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
         } catch (NotFoundException e) {
             log.warn("Emplacement non trouvé pour activation: {}", id);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -108,6 +114,10 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
             EmplacementStockDto dto = emplacementService.desactiverEmplacement(id);
             log.info("Emplacement désactivé avec id: {}", id);
             return ResponseEntity.ok(new ApiResponse<>(true, "Emplacement désactivé avec succès", Arrays.asList(attachPermittedActions(dto))));
+        } catch (InventoryBusinessException e) {
+            log.warn("Désactivation refusée pour l'emplacement {}: {}", id, e.getMessage());
+            return ResponseEntity.status(e.getStatus())
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
         } catch (NotFoundException e) {
             log.warn("Emplacement non trouvé pour désactivation: {}", id);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -152,7 +162,7 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
         long startTime = System.currentTimeMillis();
         OSMLogger.logMethodEntry(this.getClass(), "createEmplacement");
         try {
-             EmplacementStockDto created = emplacementService.createEmplacement(emplacementDto);
+            EmplacementStockDto created = emplacementService.createEmplacement(emplacementDto);
             log.info("Successfully created emplacement with id: {}", created.getId());
             return new ResponseEntity<>(new ApiResponse<>(true, "Emplacement created successfully", Arrays.asList(attachPermittedActions(created))),
                     HttpStatus.CREATED);
@@ -185,7 +195,7 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
         long startTime = System.currentTimeMillis();
         OSMLogger.logMethodEntry(this.getClass(), "updateEmplacement", id);
         try {
-             EmplacementStockDto updated = emplacementService.updateEmplacement(id, emplacementDto);
+            EmplacementStockDto updated = emplacementService.updateEmplacement(id, emplacementDto);
             log.info("Successfully updated emplacement with id: {}", id);
             return ResponseEntity.ok(new ApiResponse<>(true, "Emplacement updated successfully", Arrays.asList(attachPermittedActions(updated))));
         } catch (NotFoundException e) {
@@ -279,7 +289,6 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
             if (nouvelleCapacite == null || nouvelleCapacite.trim().isEmpty()) {
                 throw new BadRequestException("capaciteActuelle is required for capacity update");
             }
-            // Validate that it's a valid number
             try {
                 Double.parseDouble(nouvelleCapacite);
             } catch (NumberFormatException e) {
@@ -314,6 +323,10 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
             emplacementService.deleteEmplacement(id);
             log.info("Successfully deleted emplacement with id: {}", id);
             return ResponseEntity.noContent().build();
+        } catch (InventoryBusinessException e) {
+            log.warn("Suppression refusée pour l'emplacement {}: {}", id, e.getMessage());
+            return ResponseEntity.status(e.getStatus())
+                    .body(new ApiResponse<>(false, e.getMessage(), null));
         } catch (NotFoundException e) {
             log.warn("Emplacement not found for deletion with id: {}", id);
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -327,15 +340,6 @@ public class EmplacementStockController extends BaseControllerImpl<EmplacementSt
             OSMLogger.logPerformance(this.getClass(), "deleteEmplacement", startTime, System.currentTimeMillis());
         }
     }
-    /*@GetMapping("/audit/all")
-    public ResponseEntity<List<AuditDto>> getAudit() {
-        try {
-            List<AuditDto> auditList = emplacementService.getAuditEmplacements();
-            return ResponseEntity.ok(auditList);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }*/
 
     @Override
     public ResponseEntity<?> resolve(String publicCode) {

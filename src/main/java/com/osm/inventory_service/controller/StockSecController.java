@@ -229,6 +229,12 @@ public class StockSecController extends BaseControllerImpl<StockSec, StockSecDto
         }
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> supprimerStock(@PathVariable UUID id) {
+        stockService.supprimerStock(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/mouvements")
     public ResponseEntity<?> getAllMouvements() {
         try {

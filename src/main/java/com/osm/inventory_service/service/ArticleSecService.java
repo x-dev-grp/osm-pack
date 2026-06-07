@@ -9,10 +9,8 @@ import com.osm.inventory_service.dto.EmplacementStockDto;
 import com.osm.inventory_service.dto.FournisseurDto;
 import com.osm.inventory_service.entity.ArticleSec;
 import com.osm.inventory_service.entity.Fournisseur;
-import com.osm.inventory_service.exception.InventoryBusinessException;
 import com.osm.inventory_service.entity.StockSec;
 import com.osm.inventory_service.repository.ArticleSecRepository;
-import com.osm.inventory_service.repository.BomLineRepository;
 import com.osm.inventory_service.repository.FournisseurRepository;
 import com.osm.inventory_service.repository.StockSecRepository;
 import com.xdev.xdevbase.config.TenantContext;
@@ -41,7 +39,7 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
     private final ModelMapper modelMapper;
     private final StockSecService stockSecService;
     private final StockSecRepository stockSecRepository;
-    private final BomLineRepository bomLineRepository;
+    private final InventoryDeleteGuardService deleteGuard;
     private final ObjectMapper objectMapper;
 
     @Lazy
@@ -52,7 +50,7 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
                              ModelMapper modelMapper,
                              StockSecService stockSecService,
                              StockSecRepository stockSecRepository,
-                             BomLineRepository bomLineRepository,
+                             InventoryDeleteGuardService deleteGuard,
                              ObjectMapper objectMapper) {
         super(repository, modelMapper);
         this.articleRepository = articleRepository;
@@ -60,7 +58,7 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         this.modelMapper = modelMapper;
         this.stockSecService = stockSecService;
         this.stockSecRepository = stockSecRepository;
-        this.bomLineRepository = bomLineRepository;
+        this.deleteGuard = deleteGuard;
         this.objectMapper = objectMapper;
     }
 
@@ -73,14 +71,16 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         if (article == null) {
             return null;
         }
-        StockSec stock = stockSecRepository.findByArticleId(article.getId()).orElse(null);
+        StockSec stock = stockSecRepository.findByArticleIdAndIsDeletedFalse(article.getId()).orElse(null);
         return convertToDto(article, stock);
     }
 
     @Transactional(readOnly = true)
     public List<ArticleSecDto> getAllArticles() {
         Map<UUID, StockSec> stockByArticleId = stockSecRepository.findAllByIsDeletedFalse().stream()
-                .filter(stock -> stock.getArticle() != null && stock.getArticle().getId() != null)
+                .filter(stock -> stock.getArticle() != null
+                        && stock.getArticle().getId() != null
+                        && !Boolean.TRUE.equals(stock.getArticle().getDeleted()))
                 .collect(Collectors.toMap(stock -> stock.getArticle().getId(), stock -> stock, (left, right) -> left));
 
         return articleRepository.findAllByIsDeletedFalse().stream()
@@ -126,8 +126,8 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
     public ArticleSecDto updateArticle(UUID id, ArticleSecDto articleDto) {
         ArticleSec existingArticle = getArticleEntityById(id);
         if (!existingArticle.getNom().equals(articleDto.getNom()) && articleDto.getFournisseur() != null) {
-            Fournisseur fournisseur = fournisseurRepository.findById(articleDto.getFournisseur().getId()).orElse(null);
-            if (fournisseur != null && articleRepository.existsByNomAndFournisseur(articleDto.getNom(), fournisseur)) {
+            Fournisseur fournisseur = fournisseurRepository.findByIdAndIsDeletedFalse(articleDto.getFournisseur().getId()).orElse(null);
+            if (fournisseur != null && articleRepository.existsByNomAndFournisseurAndIsDeletedFalse(articleDto.getNom(), fournisseur)) {
                 throw new RuntimeException("Un article avec ce nom existe déjà pour ce fournisseur");
             }
         }
@@ -150,7 +150,7 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         if (articleDto.getFournisseur() != null) {
             if (existingArticle.getFournisseur() == null ||
                     !articleDto.getFournisseur().getId().equals(existingArticle.getFournisseur().getId())) {
-                Fournisseur fournisseur = fournisseurRepository.findById(articleDto.getFournisseur().getId())
+                Fournisseur fournisseur = fournisseurRepository.findByIdAndIsDeletedFalse(articleDto.getFournisseur().getId())
                         .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé"));
                 existingArticle.setFournisseur(fournisseur);
             }
@@ -164,13 +164,13 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
     }
     @Transactional(readOnly = true)
     public List<ArticleSecDto> getAllActiveArticles() {
-        return articleRepository.findByActifTrue().stream()
+        return articleRepository.findByActifTrueAndIsDeletedFalse().stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
     @Transactional(readOnly = true)
     public List<ArticleSecDto> getArticlesByCategorie(CategorieArticle categorie) {
-        return articleRepository.findByCategorie(categorie).stream()
+        return articleRepository.findByCategorieAndIsDeletedFalse(categorie).stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
@@ -186,28 +186,40 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
     @Transactional
     public ArticleSecDto desactiverArticle(UUID id) {
         ArticleSec article = getArticleEntityById(id);
-
-        stockSecRepository.findByArticleId(id).ifPresent(stock -> {
-            int actuelle = stock.getQuantiteActuelle() != null ? stock.getQuantiteActuelle() : 0;
-            int reservee = stock.getQuantiteReservee() != null ? stock.getQuantiteReservee() : 0;
-            if (actuelle > 0 || reservee > 0) {
-                throw new InventoryBusinessException(
-                        "ARTICLE_STOCK_NOT_EMPTY",
-                        "Impossible de desactiver l'article : stock actuel=" + actuelle + ", reserve=" + reservee
-                );
-            }
-        });
-
-        if (bomLineRepository.countByArticle_Id(id) > 0) {
-            throw new InventoryBusinessException(
-                    "ARTICLE_USED_IN_BOM",
-                    "Impossible de desactiver l'article : il est utilise dans une ou plusieurs nomenclatures"
-            );
-        }
+        deleteGuard.assertArticleCanBeRemoved(id);
 
         article.setActif(false);
         ArticleSec updatedArticle = articleRepository.save(article);
         return convertToDto(updatedArticle);
+    }
+
+    @Transactional
+    public void supprimerArticle(UUID id) {
+        ArticleSec article = getArticleEntityById(id);
+        deleteGuard.assertArticleCanBeRemoved(id);
+
+        stockSecRepository.findByArticleIdAndIsDeletedFalse(id).ifPresent(stock -> {
+            stock.setDeleted(true);
+            stockSecRepository.save(stock);
+        });
+
+        article.setDeleted(true);
+        article.setActif(false);
+        articleRepository.save(article);
+    }
+
+    @Override
+    @Transactional
+    public ArticleSecDto delete(UUID id) {
+        ArticleSecDto dto = getArticleById(id);
+        supprimerArticle(id);
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public void remove(UUID id) {
+        supprimerArticle(id);
     }
 
     @Override
@@ -219,7 +231,7 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
     private ArticleSec convertToEntity(ArticleSecDto dto) {
         ArticleSec article = modelMapper.map(dto, ArticleSec.class);
         if (dto.getFournisseur() != null && dto.getFournisseur().getId() != null) {
-            Fournisseur fournisseur = fournisseurRepository.findById(dto.getFournisseur().getId())
+            Fournisseur fournisseur = fournisseurRepository.findByIdAndIsDeletedFalse(dto.getFournisseur().getId())
                     .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé avec ID: " + dto.getFournisseur().getId()));
             article.setFournisseur(fournisseur);
         } else {
@@ -240,7 +252,7 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
     }
 
     private ArticleSecDto convertToDto(ArticleSec article) {
-        StockSec stock = stockSecRepository.findByArticleId(article.getId()).orElse(null);
+        StockSec stock = stockSecRepository.findByArticleIdAndIsDeletedFalse(article.getId()).orElse(null);
         return convertToDto(article, stock);
     }
 
@@ -340,6 +352,9 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         }
 
         return entity.map(article -> {
+                    if (Boolean.TRUE.equals(article.getDeleted())) {
+                        throw new EntityNotFoundException("Article non trouve pour le code : " + publicCode);
+                    }
                     QrResolveResponse response = new QrResolveResponse();
                     response.setEntityType(getEntityType());
                     response.setPublicCode(normalizedCode);

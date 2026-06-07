@@ -11,6 +11,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -40,6 +41,7 @@ public class FournisseurController extends BaseControllerImpl<Fournisseur, Fourn
     public ResponseEntity<FournisseurDto> getFournisseurById(@PathVariable UUID id) {
         return ResponseEntity.ok(attachPermittedActions(fournisseurService.getFournisseurById(id)));
     }
+    @Transactional(readOnly = true)
     @GetMapping("/actifs")
     public ResponseEntity<List<FournisseurDto>> getActiveFournisseurs() {
         return ResponseEntity.ok(attachPermittedActions(fournisseurService.getActiveFournisseurs()));
@@ -70,6 +72,13 @@ public class FournisseurController extends BaseControllerImpl<Fournisseur, Fourn
     public ResponseEntity<FournisseurDto> desactiverFournisseur(@PathVariable UUID id) {
         return ResponseEntity.ok(attachPermittedActions(fournisseurService.desactiverFournisseur(id)));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> supprimerFournisseur(@PathVariable UUID id) {
+        fournisseurService.supprimerFournisseur(id);
+        return ResponseEntity.ok().build();
+    }
+
     @Override
     protected String getResourceName() {
         return "Fournisseur";

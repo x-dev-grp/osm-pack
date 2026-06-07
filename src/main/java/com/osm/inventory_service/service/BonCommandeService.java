@@ -109,15 +109,20 @@ public class BonCommandeService extends BaseServiceImpl<BonCommande, BonCommande
     }
     @Transactional(readOnly = true)
     public List<BonCommandeDto> getAllBonsCommande() {
-        return bonCommandeRepository.findAll().stream()
+        return bonCommandeRepository.findAllByIsDeletedFalse().stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
     @Transactional(readOnly = true)
     public BonCommandeDto getBonCommandeById(UUID id) {
-        BonCommande bonCommande = bonCommandeRepository.findById(id)
+        BonCommande bonCommande = bonCommandeRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Bon de commande non trouvé avec id: " + id));
         return convertToDto(bonCommande);
+    }
+
+    private BonCommande getBonCommandeEntityById(UUID id) {
+        return bonCommandeRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> new RuntimeException("Bon de commande non trouvé avec id: " + id));
     }
 
     @Transactional
@@ -165,8 +170,7 @@ public class BonCommandeService extends BaseServiceImpl<BonCommande, BonCommande
     }
     @Transactional
     public BonCommandeDto validerBonCommande(UUID id) {
-        BonCommande bc = bonCommandeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Bon de commande non trouvé avec id: " + id));
+        BonCommande bc = getBonCommandeEntityById(id);
 
         if (bc.getStatus() != StatutBonCommande.EN_ATTENTE) {
             throw new RuntimeException("Seuls les bons en attente peuvent être validés");
@@ -179,8 +183,7 @@ public class BonCommandeService extends BaseServiceImpl<BonCommande, BonCommande
 
     @Transactional
     public BonCommandeDto refuserBonCommande(UUID id, String motif) {
-        BonCommande bc = bonCommandeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Bon de commande non trouvé avec id: " + id));
+        BonCommande bc = getBonCommandeEntityById(id);
 
         bc.setStatus(StatutBonCommande.REFUSE);
         bc.setMotifRefus(motif);
@@ -190,8 +193,7 @@ public class BonCommandeService extends BaseServiceImpl<BonCommande, BonCommande
 
     @Transactional
     public BonCommandeDto receptionnerCommande(UUID bonId, List<LigneBonCommandeDto> lignesRecues) {
-        BonCommande bc = bonCommandeRepository.findById(bonId)
-                .orElseThrow(() -> new RuntimeException("Bon de commande non trouvé avec id: " + bonId));
+        BonCommande bc = getBonCommandeEntityById(bonId);
 
         if (bc.getStatus() != StatutBonCommande.VALIDE && bc.getStatus() != StatutBonCommande.PARTIELLEMENT_RECU) {
             throw new RuntimeException("Seules les commandes validées ou partiellement reçues peuvent être réceptionnées. Statut actuel: " + bc.getStatus());
@@ -241,6 +243,30 @@ public class BonCommandeService extends BaseServiceImpl<BonCommande, BonCommande
         }
         BonCommande updated = bonCommandeRepository.save(bc);
         return convertToDto(updated);
+    }
+
+    @Transactional
+    public void supprimerBonCommande(UUID id) {
+        BonCommande bc = getBonCommandeEntityById(id);
+        if (bc.getStatus() == StatutBonCommande.RECU || bc.getStatus() == StatutBonCommande.PARTIELLEMENT_RECU) {
+            throw new RuntimeException("Impossible de supprimer un bon de commande deja receptionne");
+        }
+        bc.setDeleted(true);
+        bonCommandeRepository.save(bc);
+    }
+
+    @Override
+    @Transactional
+    public BonCommandeDto delete(UUID id) {
+        BonCommandeDto dto = convertToDto(getBonCommandeEntityById(id));
+        supprimerBonCommande(id);
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public void remove(UUID id) {
+        supprimerBonCommande(id);
     }
 
     @Override
@@ -298,6 +324,9 @@ public class BonCommandeService extends BaseServiceImpl<BonCommande, BonCommande
         }
 
         return entity.map(bon -> {
+                    if (Boolean.TRUE.equals(bon.getDeleted())) {
+                        throw new EntityNotFoundException("Bon de commande non trouve pour le code : " + publicCode);
+                    }
                     QrResolveResponse response = new QrResolveResponse();
                     response.setEntityType(getEntityType());
                     response.setPublicCode(normalizedCode);

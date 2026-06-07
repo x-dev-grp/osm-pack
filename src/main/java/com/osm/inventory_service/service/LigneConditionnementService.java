@@ -38,14 +38,14 @@ public class LigneConditionnementService extends BaseServiceImpl<LigneConditionn
     }
 
     public List<LigneConditionnementDto> getAllLignes() {
-        return ligneRepository.findAll().stream()
+        return ligneRepository.findAllByIsDeletedFalse().stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
 
     public LigneConditionnementDto getLigneById(UUID id) {
-        LigneConditionnement ligne = ligneRepository.findById(id)
+        LigneConditionnement ligne = ligneRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Ligne non trouvée avec id: " + id));
         return convertToDto(ligne);
     }
@@ -69,10 +69,10 @@ public class LigneConditionnementService extends BaseServiceImpl<LigneConditionn
     }
     @Transactional
     public LigneConditionnementDto updateLigne(UUID id, LigneConditionnementDto ligneDto) {
-        LigneConditionnement existingLigne = ligneRepository.findById(id)
+        LigneConditionnement existingLigne = ligneRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Ligne non trouvée avec id: " + id));
         if (!existingLigne.getCode().equals(ligneDto.getCode())) {
-            if (ligneRepository.existsByCode(ligneDto.getCode())) {
+            if (ligneRepository.existsByCodeAndIsDeletedFalse(ligneDto.getCode())) {
                 throw new RuntimeException("Une ligne avec ce code existe déjà: " + ligneDto.getCode());
             }
             existingLigne.setCode(ligneDto.getCode());
@@ -94,7 +94,7 @@ public class LigneConditionnementService extends BaseServiceImpl<LigneConditionn
 
     @Transactional
     public void desactiverLigne(UUID id) {
-        LigneConditionnement ligne = ligneRepository.findById(id)
+        LigneConditionnement ligne = ligneRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Ligne non trouvée avec id: " + id));
         ligne.setActif(false);
         ligneRepository.save(ligne);
@@ -102,7 +102,7 @@ public class LigneConditionnementService extends BaseServiceImpl<LigneConditionn
 
     @Transactional
     public void activerLigne(UUID id) {
-        LigneConditionnement ligne = ligneRepository.findById(id)
+        LigneConditionnement ligne = ligneRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Ligne non trouvée avec id: " + id));
         ligne.setActif(true);
         ligneRepository.save(ligne);
@@ -110,7 +110,7 @@ public class LigneConditionnementService extends BaseServiceImpl<LigneConditionn
 
     @Transactional
     public LigneConditionnementDto changerEtat(UUID id, Statue nouvelEtat) {
-        LigneConditionnement ligne = ligneRepository.findById(id)
+        LigneConditionnement ligne = ligneRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Ligne non trouvée avec id: " + id));
 
         ligne.setEtat(nouvelEtat);
@@ -118,9 +118,18 @@ public class LigneConditionnementService extends BaseServiceImpl<LigneConditionn
         return convertToDto(updatedLigne);
     }
     public List<LigneConditionnementDto> getLignesActives() {
-        return ligneRepository.findByEtat(Statue.ACTIF).stream()
+        return ligneRepository.findByEtatAndIsDeletedFalse(Statue.ACTIF).stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void supprimerLigne(UUID id) {
+        LigneConditionnement ligne = ligneRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> new RuntimeException("Ligne non trouvée avec id: " + id));
+        ligne.setDeleted(true);
+        ligne.setActif(false);
+        ligneRepository.save(ligne);
     }
 
     private String genererCodeLigne() {
@@ -192,6 +201,9 @@ public class LigneConditionnementService extends BaseServiceImpl<LigneConditionn
         }
 
         return entity.map(ligne -> {
+                    if (Boolean.TRUE.equals(ligne.getDeleted())) {
+                        throw new EntityNotFoundException("Ligne non trouvee pour le code : " + publicCode);
+                    }
                     QrResolveResponse response = new QrResolveResponse();
                     response.setEntityType(getEntityType());
                     response.setPublicCode(normalizedCode);

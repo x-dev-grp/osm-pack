@@ -115,7 +115,7 @@ public class StatistiqueService {
 
         return articlesActifs.stream()
                 .map(article -> {
-                    StockSec stock = stockRepository.findByArticleId(article.getId()).orElse(null);
+                    StockSec stock = stockRepository.findByArticleIdAndIsDeletedFalse(article.getId()).orElse(null);
                     int actuelle = safe(stock != null ? stock.getQuantiteActuelle() : 0);
                     int minimum = safe(article.getStockMinimum());
                     int disponible = stock != null

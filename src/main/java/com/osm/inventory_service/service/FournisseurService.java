@@ -27,23 +27,25 @@ public class FournisseurService extends BaseServiceImpl<Fournisseur, Fournisseur
 
     private final FournisseurRepository fournisseurRepository;
     private final ModelMapper modelMapper;
+    private final InventoryDeleteGuardService deleteGuard;
 
     @Autowired
-    public FournisseurService(BaseRepository<Fournisseur> repository, FournisseurRepository fournisseurRepository, ModelMapper modelMapper) {
+    public FournisseurService(BaseRepository<Fournisseur> repository, FournisseurRepository fournisseurRepository, ModelMapper modelMapper, InventoryDeleteGuardService deleteGuard) {
         super(repository, modelMapper);
         this.fournisseurRepository = fournisseurRepository;
         this.modelMapper = modelMapper;
+        this.deleteGuard = deleteGuard;
     }
 
     public List<FournisseurDto> getAllFournisseurs() {
-        return fournisseurRepository.findAll().stream()
+        return fournisseurRepository.findAllByIsDeletedFalse().stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public FournisseurDto getFournisseurById(UUID id) {
-        Fournisseur fournisseur = fournisseurRepository.findById(id)
+        Fournisseur fournisseur = fournisseurRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé avec id: " + id));
         return convertToDto(fournisseur);
     }
@@ -55,17 +57,17 @@ public class FournisseurService extends BaseServiceImpl<Fournisseur, Fournisseur
         }
         fournisseurDto.setCode(genererCodeFournisseur());
         if (fournisseurDto.getEmail() != null && !fournisseurDto.getEmail().isEmpty()) {
-            if (fournisseurRepository.existsByEmail(fournisseurDto.getEmail())) {
+            if (fournisseurRepository.existsByEmailAndIsDeletedFalse(fournisseurDto.getEmail())) {
                 throw new RuntimeException("Un fournisseur avec cet email existe déjà: " + fournisseurDto.getEmail());
             }
         }
         if (fournisseurDto.getTelephone() != null && !fournisseurDto.getTelephone().isEmpty()) {
-            if (fournisseurRepository.existsByTelephone(fournisseurDto.getTelephone())) {
+            if (fournisseurRepository.existsByTelephoneAndIsDeletedFalse(fournisseurDto.getTelephone())) {
                 throw new RuntimeException("Un fournisseur avec ce téléphone existe déjà: " + fournisseurDto.getTelephone());
             }
         }
         if (fournisseurDto.getNumeroTva() != null && !fournisseurDto.getNumeroTva().isEmpty()) {
-            if (fournisseurRepository.existsByNumeroTva(fournisseurDto.getNumeroTva())) {
+            if (fournisseurRepository.existsByNumeroTvaAndIsDeletedFalse(fournisseurDto.getNumeroTva())) {
                 throw new RuntimeException("Un fournisseur avec ce numéro de TVA existe déjà: " + fournisseurDto.getNumeroTva());
             }
         }
@@ -86,14 +88,14 @@ public class FournisseurService extends BaseServiceImpl<Fournisseur, Fournisseur
 
     @Transactional
     public FournisseurDto updateFournisseur(UUID id, FournisseurDto fournisseurDto) {
-        Fournisseur existingFournisseur = fournisseurRepository.findById(id)
+        Fournisseur existingFournisseur = fournisseurRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé avec id: " + id));
         if (!StringUtils.hasText(fournisseurDto.getNom())) {
             throw new RuntimeException("Le nom du fournisseur est obligatoire");
         }
         if (fournisseurDto.getEmail() != null) {
             if (!fournisseurDto.getEmail().equals(existingFournisseur.getEmail())) {
-                if (fournisseurRepository.existsByEmail(fournisseurDto.getEmail())) {
+                if (fournisseurRepository.existsByEmailAndIsDeletedFalseAndIdNot(fournisseurDto.getEmail(), id)) {
                     throw new RuntimeException("Un fournisseur avec cet email existe déjà: " + fournisseurDto.getEmail());
                 }
                 existingFournisseur.setEmail(fournisseurDto.getEmail());
@@ -103,7 +105,7 @@ public class FournisseurService extends BaseServiceImpl<Fournisseur, Fournisseur
         }
         if (fournisseurDto.getTelephone() != null) {
             if (!fournisseurDto.getTelephone().equals(existingFournisseur.getTelephone())) {
-                if (fournisseurRepository.existsByTelephone(fournisseurDto.getTelephone())) {
+                if (fournisseurRepository.existsByTelephoneAndIsDeletedFalseAndIdNot(fournisseurDto.getTelephone(), id)) {
                     throw new RuntimeException("Un fournisseur avec ce téléphone existe déjà: " + fournisseurDto.getTelephone());
                 }
                 existingFournisseur.setTelephone(fournisseurDto.getTelephone());
@@ -113,7 +115,7 @@ public class FournisseurService extends BaseServiceImpl<Fournisseur, Fournisseur
         }
         if (fournisseurDto.getNumeroTva() != null) {
             if (!fournisseurDto.getNumeroTva().equals(existingFournisseur.getNumeroTva())) {
-                if (fournisseurRepository.existsByNumeroTva(fournisseurDto.getNumeroTva())) {
+                if (fournisseurRepository.existsByNumeroTvaAndIsDeletedFalseAndIdNot(fournisseurDto.getNumeroTva(), id)) {
                     throw new RuntimeException("Un fournisseur avec ce numéro de TVA existe déjà: " + fournisseurDto.getNumeroTva());
                 }
                 existingFournisseur.setNumeroTva(fournisseurDto.getNumeroTva());
@@ -147,7 +149,7 @@ public class FournisseurService extends BaseServiceImpl<Fournisseur, Fournisseur
 
     @Transactional
     public FournisseurDto activerFournisseur(UUID id) {
-        Fournisseur fournisseur = fournisseurRepository.findById(id)
+        Fournisseur fournisseur = fournisseurRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé avec id: " + id));
         fournisseur.setActif(true);
         Fournisseur updatedFournisseur = fournisseurRepository.save(fournisseur);
@@ -156,17 +158,45 @@ public class FournisseurService extends BaseServiceImpl<Fournisseur, Fournisseur
 
     @Transactional
     public FournisseurDto desactiverFournisseur(UUID id) {
-        Fournisseur fournisseur = fournisseurRepository.findById(id)
+        Fournisseur fournisseur = fournisseurRepository.findByIdAndIsDeletedFalse(id)
                 .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé avec id: " + id));
+        deleteGuard.assertFournisseurCanBeRemoved(id);
         fournisseur.setActif(false);
         Fournisseur updatedFournisseur = fournisseurRepository.save(fournisseur);
         return convertToDto(updatedFournisseur);
     }
-    private String genererCodeFournisseur() {
+
+    @Transactional
+    public void supprimerFournisseur(UUID id) {
+        Fournisseur fournisseur = fournisseurRepository.findByIdAndIsDeletedFalse(id)
+                .orElseThrow(() -> new RuntimeException("Fournisseur non trouvé avec id: " + id));
+        deleteGuard.assertFournisseurCanBeRemoved(id);
+        fournisseur.setDeleted(true);
+        fournisseur.setActif(false);
+        fournisseurRepository.save(fournisseur);
+    }
+
+    @Override
+    @Transactional
+    public FournisseurDto delete(UUID id) {
+        FournisseurDto dto = getFournisseurById(id);
+        supprimerFournisseur(id);
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public void remove(UUID id) {
+        supprimerFournisseur(id);
+    }
+
+    @Transactional(readOnly = true)
+    protected String genererCodeFournisseur() {
         return generateBusinessCode("code", "FO");
     }
+
     public List<FournisseurDto> getActiveFournisseurs() {
-        return fournisseurRepository.findByActifTrue().stream()
+        return fournisseurRepository.findByActifTrueAndIsDeletedFalse().stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
@@ -228,6 +258,9 @@ public class FournisseurService extends BaseServiceImpl<Fournisseur, Fournisseur
         }
 
         return entity.map(fournisseur -> {
+                    if (Boolean.TRUE.equals(fournisseur.getDeleted())) {
+                        throw new EntityNotFoundException("Fournisseur non trouve pour le code : " + publicCode);
+                    }
                     QrResolveResponse response = new QrResolveResponse();
                     response.setEntityType(getEntityType());
                     response.setPublicCode(normalizedCode);
