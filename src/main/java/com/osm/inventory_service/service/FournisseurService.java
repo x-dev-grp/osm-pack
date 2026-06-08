@@ -194,7 +194,7 @@ public class FournisseurService extends BaseServiceImpl<Fournisseur, Fournisseur
     protected String genererCodeFournisseur() {
         return generateBusinessCode("code", "FO");
     }
-
+    @Transactional(readOnly = true)
     public List<FournisseurDto> getActiveFournisseurs() {
         return fournisseurRepository.findByActifTrueAndIsDeletedFalse().stream()
                 .map(this::convertToDto)

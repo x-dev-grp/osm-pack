@@ -41,7 +41,7 @@ public class ProduitFinalService extends BaseServiceImpl<ProduitFinal, ProduitFi
         this.modelMapper = modelMapper;
         this.deleteGuard = deleteGuard;
     }
-
+    @Transactional(readOnly = true)
     public List<ProduitFinalDto> getAllProduitsFinaux() {
         return produitFinalRepository.findByIsDeletedFalse().stream()
                 .map(this::convertToDto)
@@ -61,6 +61,7 @@ public class ProduitFinalService extends BaseServiceImpl<ProduitFinal, ProduitFi
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<ProduitFinalDto> getProduitsFinauxByType(ProduitFinalType type) {
         return produitFinalRepository.findByTypeAndIsDeletedFalse(type).stream()
                 .map(this::convertToDto)
