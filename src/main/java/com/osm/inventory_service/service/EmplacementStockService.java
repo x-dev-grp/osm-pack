@@ -43,7 +43,7 @@ public class EmplacementStockService extends BaseServiceImpl<EmplacementStock, E
         this.stockSecRepository = stockSecRepository;
         this.modelMapper = modelMapper;
     }
-
+    @Transactional(readOnly = true)
     public List<EmplacementStockDto> getAllEmplacements() {
         return emplacementRepository.findAllByIsDeletedFalse().stream()
                 .map(this::convertToDto)

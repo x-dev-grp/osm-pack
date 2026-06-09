@@ -36,7 +36,7 @@ public class FournisseurService extends BaseServiceImpl<Fournisseur, Fournisseur
         this.modelMapper = modelMapper;
         this.deleteGuard = deleteGuard;
     }
-
+    @Transactional(readOnly = true)
     public List<FournisseurDto> getAllFournisseurs() {
         return fournisseurRepository.findAllByIsDeletedFalse().stream()
                 .map(this::convertToDto)

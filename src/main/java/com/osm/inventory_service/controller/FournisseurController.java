@@ -31,7 +31,7 @@ public class FournisseurController extends BaseControllerImpl<Fournisseur, Fourn
         super(baseService, modelMapper);
         this.fournisseurService = fournisseurService;
     }
-
+    @Transactional(readOnly = true)
     @GetMapping
     public ResponseEntity<List<FournisseurDto>> getAllFournisseurs() {
         return ResponseEntity.ok(attachPermittedActions(fournisseurService.getAllFournisseurs()));
