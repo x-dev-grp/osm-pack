@@ -75,8 +75,7 @@ public class ArticleSecService extends BaseServiceImpl<ArticleSec, ArticleSecDto
         return convertToDto(article, stock);
     }
 
-    @Transactional(readOnly = true)
-    public List<ArticleSecDto> getAllArticles() {
+     public List<ArticleSecDto> getAllArticles() {
         Map<UUID, StockSec> stockByArticleId = stockSecRepository.findAllByIsDeletedFalse().stream()
                 .filter(stock -> stock.getArticle() != null
                         && stock.getArticle().getId() != null
